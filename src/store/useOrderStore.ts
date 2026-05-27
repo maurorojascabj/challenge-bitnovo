@@ -13,8 +13,7 @@ export const useOrderStore = create<OrderStore>((set) => ({
 
   setOrder: (order) => set({ order }),
 
-  updateStatus: (status) =>
-    set((s) => (s.order ? { order: { ...s.order, status } } : {})),
+  updateStatus: (status) => set((s) => (s.order ? { order: { ...s.order, status } } : {})),
 
   clearOrder: () => set({ order: null }),
 }));

@@ -1,11 +1,5 @@
 import React, { memo } from 'react';
-import {
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  ViewStyle,
-  View,
-} from 'react-native';
+import { TouchableOpacity, ActivityIndicator, StyleSheet, ViewStyle, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/theme';
 import { Typography } from './Typography';
@@ -62,10 +56,7 @@ export const Button = memo(function Button({
       ) : (
         <View style={styles.content}>
           {leftIcon && <View style={styles.iconWrapper}>{leftIcon}</View>}
-          <Typography
-            variant="bodySemibold"
-            color={getTextColor(variant, isDisabled)}
-          >
+          <Typography variant="bodySemibold" color={getTextColor(variant, isDisabled)}>
             {label}
           </Typography>
         </View>

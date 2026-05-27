@@ -37,9 +37,10 @@ export const FIAT_CURRENCIES: Record<FiatKey, CurrencyItem> = {
   },
 } as const;
 
-export const FIAT_CURRENCY_LIST = Object.entries(FIAT_CURRENCIES).map(
-  ([key, value]) => ({ key: key as FiatKey, ...value })
-);
+export const FIAT_CURRENCY_LIST = Object.entries(FIAT_CURRENCIES).map(([key, value]) => ({
+  key: key as FiatKey,
+  ...value,
+}));
 
 export const DEFAULT_FIAT: FiatKey = 'eur';
 

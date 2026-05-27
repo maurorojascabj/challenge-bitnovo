@@ -73,9 +73,12 @@ export const AmountInput = memo(function AmountInput({
 
   const getMask = (): Mask => {
     switch (currency) {
-      case 'EUR': return buildEurMask(value);
-      case 'USD': return buildUsdMask(value);
-      case 'GBP': return buildGbpMask(value);
+      case 'EUR':
+        return buildEurMask(value);
+      case 'USD':
+        return buildUsdMask(value);
+      case 'GBP':
+        return buildGbpMask(value);
     }
   };
 
@@ -121,8 +124,6 @@ const styles = StyleSheet.create<{ container: ViewStyle; input: TextStyle }>({
     color: theme.colors.textPrimary,
     textAlign: 'center',
     minWidth: 120,
-    ...(Platform.OS === 'ios'
-      ? { lineHeight: 64 }
-      : { includeFontPadding: false }),
+    ...(Platform.OS === 'ios' ? { lineHeight: 64 } : { includeFontPadding: false }),
   },
 });

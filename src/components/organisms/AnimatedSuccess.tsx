@@ -53,11 +53,7 @@ export const AnimatedSuccess = memo(function AnimatedSuccess({ size = 120 }: Ani
   return (
     <View style={[styles.wrapper, { width: size, height: size }]}>
       <Animated.View
-        style={[
-          styles.circle,
-          { width: size, height: size, borderRadius: size / 2 },
-          circleStyle,
-        ]}
+        style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }, circleStyle]}
       />
       <Animated.View style={[styles.checkWrapper, checkStyle]}>
         <View style={styles.checkmark}>

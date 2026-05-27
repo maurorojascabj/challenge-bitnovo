@@ -9,10 +9,7 @@ export const createPaymentSchema = z.object({
       return !isNaN(num) && num > 0;
     }, 'El importe debe ser mayor que 0'),
   fiat: z.enum(['EUR', 'USD', 'GBP']),
-  concept: z
-    .string()
-    .max(140, 'El concepto no puede superar los 140 caracteres')
-    .optional(),
+  concept: z.string().max(140, 'El concepto no puede superar los 140 caracteres').optional(),
 });
 
 export type CreatePaymentFormValues = z.infer<typeof createPaymentSchema>;

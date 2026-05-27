@@ -74,7 +74,11 @@ export const WhatsAppModal = memo(function WhatsAppModal({
             />
 
             {/* Phone input */}
-            <Typography variant="smallSemibold" color={theme.colors.textSecondary} style={styles.phoneLabel}>
+            <Typography
+              variant="smallSemibold"
+              color={theme.colors.textSecondary}
+              style={styles.phoneLabel}
+            >
               Número de teléfono
             </Typography>
             <View style={styles.phoneRow}>

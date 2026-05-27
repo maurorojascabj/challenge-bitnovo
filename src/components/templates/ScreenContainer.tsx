@@ -35,9 +35,7 @@ export const ScreenContainer = memo(function ScreenContainer({
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.inner, padded && styles.padded, style]}>
-      {children}
-    </View>
+    <View style={[styles.inner, padded && styles.padded, style]}>{children}</View>
   );
 
   return (

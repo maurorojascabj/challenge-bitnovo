@@ -134,11 +134,7 @@ export default function SharePaymentScreen() {
       </ScreenContainer>
 
       {/* WhatsApp modal */}
-      <WhatsAppModal
-        visible={showWA}
-        onClose={() => setShowWA(false)}
-        onSend={shareWhatsApp}
-      />
+      <WhatsAppModal visible={showWA} onClose={() => setShowWA(false)} onSend={shareWhatsApp} />
 
       <Toast
         message={toastMessage}

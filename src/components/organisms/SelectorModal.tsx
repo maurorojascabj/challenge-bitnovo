@@ -10,7 +10,12 @@ import {
   TextStyle,
   SafeAreaView,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { theme } from '@/theme';
 import { Typography } from '@/components/atoms/Typography';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -62,7 +67,9 @@ function SelectorModalInner<T extends SelectorItem>({
     ? items.filter((item) =>
         searchKeys.some((key) => {
           const val = item[key];
-          return typeof val === 'string' && val.toLowerCase().includes(debouncedQuery.toLowerCase());
+          return (
+            typeof val === 'string' && val.toLowerCase().includes(debouncedQuery.toLowerCase())
+          );
         })
       )
     : items;

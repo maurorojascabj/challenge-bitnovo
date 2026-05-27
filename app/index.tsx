@@ -21,12 +21,7 @@ import {
 } from '@/features/payments/schemas/createPayment.schema';
 import { useCreatePayment } from '@/features/payments/hooks/useCreatePayment';
 
-import {
-  FIAT_CURRENCIES,
-  FIAT_CURRENCY_LIST,
-  FiatKey,
-  FiatCurrency,
-} from '@/constants/currencies';
+import { FIAT_CURRENCIES, FIAT_CURRENCY_LIST, FiatKey, FiatCurrency } from '@/constants/currencies';
 
 export default function CreatePaymentScreen() {
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
@@ -135,16 +130,14 @@ export default function CreatePaymentScreen() {
         visible={showCurrencyModal}
         items={FIAT_CURRENCY_LIST}
         title="Selecciona una divisa"
-        onSelect={(item) => setValue('fiat', item.details as FiatCurrency, { shouldValidate: true })}
+        onSelect={(item) =>
+          setValue('fiat', item.details as FiatCurrency, { shouldValidate: true })
+        }
         onClose={() => setShowCurrencyModal(false)}
       />
 
       {/* Error toast */}
-      <Toast
-        message={error?.message ?? ''}
-        type="error"
-        visible={!!error}
-      />
+      <Toast message={error?.message ?? ''} type="error" visible={!!error} />
     </>
   );
 }

@@ -24,14 +24,11 @@ const INITIAL_DRAFT: PaymentDraft = {
 export const usePaymentStore = create<PaymentStore>((set) => ({
   draft: INITIAL_DRAFT,
 
-  setAmount: (amount) =>
-    set((s) => ({ draft: { ...s.draft, amount } })),
+  setAmount: (amount) => set((s) => ({ draft: { ...s.draft, amount } })),
 
-  setFiatKey: (fiatKey) =>
-    set((s) => ({ draft: { ...s.draft, fiatKey } })),
+  setFiatKey: (fiatKey) => set((s) => ({ draft: { ...s.draft, fiatKey } })),
 
-  setConcept: (concept) =>
-    set((s) => ({ draft: { ...s.draft, concept } })),
+  setConcept: (concept) => set((s) => ({ draft: { ...s.draft, concept } })),
 
   resetDraft: () => set({ draft: INITIAL_DRAFT }),
 }));

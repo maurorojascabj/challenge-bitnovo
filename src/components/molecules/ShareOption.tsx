@@ -9,11 +9,7 @@ interface ShareOptionProps {
   onPress: () => void;
 }
 
-export const ShareOption = memo(function ShareOption({
-  icon,
-  label,
-  onPress,
-}: ShareOptionProps) {
+export const ShareOption = memo(function ShareOption({ icon, label, onPress }: ShareOptionProps) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={styles.container}>
       <View style={styles.iconCircle}>{icon}</View>

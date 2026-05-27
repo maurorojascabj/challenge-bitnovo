@@ -7,8 +7,8 @@ type StateListener = (state: WsLifecycleState) => void;
 
 interface WebSocketClientOptions {
   maxRetries?: number;
-  baseDelay?: number;  // ms
-  maxDelay?: number;   // ms
+  baseDelay?: number; // ms
+  maxDelay?: number; // ms
 }
 
 export class WebSocketClient<TEvent = unknown> {
@@ -111,10 +111,7 @@ export class WebSocketClient<TEvent = unknown> {
       this.setState('closed');
       return;
     }
-    const delay = Math.min(
-      this.baseDelay * Math.pow(2, this.retries),
-      this.maxDelay
-    );
+    const delay = Math.min(this.baseDelay * Math.pow(2, this.retries), this.maxDelay);
     this.retries += 1;
     this.retryTimer = setTimeout(() => this.open(), delay);
   }

@@ -1,11 +1,5 @@
 import React, { memo } from 'react';
-import {
-  View,
-  TextInput,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { View, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { theme } from '@/theme';
 import { Typography } from '@/components/atoms/Typography';
 
