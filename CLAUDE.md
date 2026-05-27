@@ -40,6 +40,7 @@ npx tsc --noEmit
 | Mask input | react-native-mask-input | ^1.2.3 |
 | QR | react-native-qrcode-svg | ^6.3.21 |
 | Sharing | expo-sharing, expo-linking, expo-clipboard, expo-haptics | — |
+| Fonts | @expo-google-fonts/mulish | — |
 
 ---
 
@@ -52,8 +53,10 @@ npx tsc --noEmit
 | Fiat picker | Full-screen route (`selectors/fiat`) | No `<Modal>-inside-route` friction; uses `router.canGoBack()` guard; reuses `HeaderBar` + `ScreenContainer` |
 | Country picker | `SelectorModal` bottom-sheet | WhatsApp-only flow; SVG flags already in project; modal presentation suits one-off selection |
 | Device ID | Centralized `X-Device-Id` header | Single source in axios interceptor + WS URL, sourced from `EXPO_PUBLIC_DEVICE_ID` |
-| Safe area | `SafeAreaProvider` at root + `edges` per layer | Provider in `_layout.tsx`; `HeaderBar` uses `edges={['top']}`, `ScreenContainer` uses `edges={['bottom']}` — no double-wrapping |
+| Safe area | `SafeAreaProvider` at root + `edges` per layer | Provider in `_layout.tsx`; `HeaderBar` uses `edges={['top']}`, `ScreenContainer` uses `edges={['bottom']}` for standard screens — no double-wrapping. Screens with `stickyFooter` use a plain `View` + `Keyboard` listener instead (see gotcha 15). |
 | Header layout | `absoluteFillObject` center + flex sides | Title spans full row width; side buttons never squeeze the center; `pointerEvents="none"` lets taps reach side elements |
+| Typography | Mulish via `@expo-google-fonts/mulish` | Loaded in `_layout.tsx` with `useFonts`; splash held until fonts ready; `fontFamily` set per variant in `theme/typography.ts`; no inline font strings anywhere |
+| Button shadow | Flat (`theme.shadows.button` is empty) | Spec requires no shadow on the primary CTA; token kept for API stability |
 
 ---
 
@@ -61,8 +64,8 @@ npx tsc --noEmit
 
 ```
 app/                         # expo-router file-based routes
-  _layout.tsx                # Root Stack, GestureHandlerRootView, SplashScreen guard
-  index.tsx                  # CreatePayment screen (RHF form)
+  _layout.tsx                # Root Stack, GestureHandlerRootView, SplashScreen guard, Mulish useFonts
+  index.tsx                  # CreatePayment screen (RHF form, amount/max validation, stickyFooter)
   share/[id].tsx             # SharePayment screen (WS + 4 share options)
   qr/[id].tsx                # QR screen (WS subscription)
   success.tsx                # PaymentSuccess screen (AnimatedSuccess)
@@ -95,7 +98,7 @@ src/
         useShareLinks.ts     # shareWhatsApp, shareEmail, shareNative
         index.ts
       schemas/
-        createPayment.schema.ts  # Zod v4 schema for form validation
+        createPayment.schema.ts  # Zod v4 schema: amount > 0 (min), concept max 140 chars
       ws/paymentSocket.ts    # subscribeToOrder() wrapping generic WebSocketClient
       types.ts               # Order, OrderStatus, AppError, COMPLETED_STATUSES, TERMINAL_STATUSES
   hooks/
@@ -118,14 +121,14 @@ src/
     colors.ts                # primary[50-900] (500=#035AC5), neutral, semantic tokens (incl. buttonDisabledBg/Text)
     spacing.ts               # xxs:2 … huge:64
     radius.ts                # xs:4 … pill:999
-    typography.ts            # display, h1-h3, body, small, caption + Semibold variants
-    shadows.ts               # card, modal, button (Platform.select iOS/Android)
-    index.ts                 # Composes all tokens into `theme`; exports `useTheme()`
+    typography.ts            # display, h1-h3, body, small, caption + Semibold variants; each has fontFamily
+    shadows.ts               # card, modal shadows; button is empty (flat spec)
+    index.ts                 # Composes all tokens into `theme`; exports `fontFamilies`; exports `useTheme()`
   types/
     svg.d.ts                 # Ambient module declaration for *.svg imports
     index.ts
 assets/
-  svg/                       # All flag SVGs + Bitnovo-logo.svg (ASCII filenames only — see gotcha 1)
+  svg/                       # All flag SVGs + Bitnovo-logo.svg + arrow-left.svg (ASCII filenames only — see gotcha 1)
 ```
 
 ---
@@ -171,16 +174,35 @@ EXPO_PUBLIC_DEVICE_ID=d497719b-905f-4a41-8dbe-cf124c442f42
 ```ts
 import { theme } from '@/theme';
 
-// Usage
+// Colors
 backgroundColor: theme.colors.primary[500]  // #035AC5
+// Spacing
 padding: theme.spacing.xl                   // 24
+// Radius
 borderRadius: theme.radius.md               // 12
+// Shadows (card and modal only — button is intentionally flat)
 ...theme.shadows.card
+// Font families (use these instead of hardcoding strings)
+fontFamily: theme.fontFamilies.bold         // 'Mulish_700Bold'
+fontFamily: theme.fontFamilies.semibold     // 'Mulish_600SemiBold'
+fontFamily: theme.fontFamilies.regular      // 'Mulish_400Regular'
 ```
 
 - `useTheme()` hook exported from `src/theme/index.ts` — reserved for future dark-mode swap; currently returns the static `theme` object.
 - **To add a token:** edit the relevant `src/theme/*.ts` file, keep `as const`, update the exported `Type` if needed. Types propagate automatically to every consumer.
-- Button disabled state uses `theme.colors.buttonDisabledBg` (`#EAF3FF`) and `theme.colors.buttonDisabledText` (`#71B0FD`) — spec-exact values, not neutral grays.
+- **Button disabled state** uses `theme.colors.buttonDisabledBg` (`#EAF3FF`) and `theme.colors.buttonDisabledText` (`#71B0FD`) — spec-exact values, not neutral grays.
+- **`theme.shadows.button` is empty** on all platforms — the primary CTA is flat per spec. `card` and `modal` shadows remain.
+- **`theme.fontFamilies`** exports `{ regular, medium, semibold, bold }` string constants matching the loaded Mulish weights. Never hardcode `'Mulish_700Bold'` inline — use `theme.fontFamilies.bold`.
+
+### Typography variants → Mulish weights
+
+| Variant | fontFamily |
+|---|---|
+| `display`, `h1` | `Mulish_700Bold` |
+| `h2`, `h3`, `bodySemibold`, `smallSemibold`, `captionSemibold` | `Mulish_600SemiBold` |
+| `body`, `small`, `caption` | `Mulish_400Regular` |
+
+`Typography` spreads `theme.typography[variant]` onto `<Text>`, so the font propagates to every consumer automatically.
 
 ---
 
@@ -210,6 +232,21 @@ Conventions for every component:
 3. Wrap content in `<ScreenContainer>` and use `<HeaderBar>`.
 4. Navigate with `router.push('/route')` or `router.replace('/route')` — typed routes are on.
 
+### Add a screen with a sticky CTA above the keyboard
+
+Pass the CTA as `stickyFooter` to `ScreenContainer`:
+
+```tsx
+<ScreenContainer
+  scrollable
+  stickyFooter={<Button label="Continuar" onPress={onSubmit} fullWidth />}
+>
+  {/* scroll content */}
+</ScreenContainer>
+```
+
+`ScreenContainer` switches to a `Keyboard.addListener` strategy (not `KeyboardAvoidingView`) for the footer branch — see gotcha 15. Do **not** render the button inside the `ScrollView`.
+
 ### Add an atomic component
 
 1. Pick the correct layer (atoms / molecules / organisms / templates).
@@ -236,6 +273,19 @@ Conventions for every component:
 2. `useForm<T>({ resolver: zodResolver(schema) })` with strict generic.
 3. Render controlled inputs with `<Controller>` — RHF is the single source of truth for field values.
 4. **Do not put store-managed fields into the schema.** If a value lives in Zustand (e.g. `fiatKey`), read it from the store at submit time instead of adding it to the form. Duplication causes silent desync (see gotcha 14).
+
+### Add screen-level amount validation (min/max)
+
+The schema handles format (`> 0`). Screen-level checks handle business rules with dynamic copy:
+
+```ts
+const numericAmount = parseAmount(amount); // strip mask, parseFloat
+const hasMaxError = numericAmount >= 50000;
+const amountError = errors.amount?.message
+  ?? (hasMaxError ? `El monto máximo diario es de 50.000 ${currency.symbol}` : undefined);
+const isContinueEnabled = amount.trim().length > 0
+  && !hasMaxError && !errors.amount && !errors.concept && !isLoading;
+```
 
 ### Add a full-screen selector route
 
@@ -278,9 +328,15 @@ Conventions for every component:
 
 12. **Long header titles wrap when the center is a flex child.** `HeaderBar` places the title in a `StyleSheet.absoluteFillObject` view with `pointerEvents="none"`, so the title spans the full row width regardless of side-button widths. Never convert the center slot back to a flex child — it will squeeze long titles like "Selecciona una divisa".
 
-13. **`SafeAreaProvider` must be the outermost wrapper in `_layout.tsx`.** Without it, `useSafeAreaInsets` and `SafeAreaView edges` fall back to zero insets and the header overlaps the notch. `HeaderBar` handles `edges={['top']}` and `ScreenContainer` handles `edges={['bottom']}` — no other screen needs an additional `SafeAreaView`.
+13. **`SafeAreaProvider` must be the outermost wrapper in `_layout.tsx`.** Without it, `useSafeAreaInsets` and `SafeAreaView edges` fall back to zero insets and the header overlaps the notch. `HeaderBar` handles `edges={['top']}` and `ScreenContainer` handles `edges={['bottom']}` (standard path) — no other screen needs an additional `SafeAreaView`.
 
 14. **Do not duplicate store state inside RHF.** The `fiat` field was previously in both the schema and `usePaymentStore`, causing silent desync. If a value is managed by a Zustand slice, read it from the store at submit time — keep it out of the form schema entirely.
+
+15. **`KeyboardAvoidingView` is unreliable when nested below a `HeaderBar` sibling.** When the KAV is not the root-level view, iOS cannot correctly measure its position in the window, so the padding it injects undershoots the keyboard overlap. For screens with `stickyFooter`, `ScreenContainer` bypasses KAV entirely: it uses `Keyboard.addListener('keyboardWillShow')` to capture the keyboard height and applies it as `paddingBottom` on a plain `View`. When the keyboard closes, `paddingBottom` reverts to `insets.bottom` (home indicator clearance). Never add a `KeyboardAvoidingView` around a screen that already uses `ScreenContainer` with `stickyFooter`.
+
+16. **Mulish fonts must finish loading before the first render.** `_layout.tsx` calls `useFonts({ Mulish_400Regular, Mulish_600SemiBold, Mulish_700Bold })` and returns `null` (keeping the splash screen) until `fontsLoaded || fontError`. If you add a new Mulish weight, import it from `@expo-google-fonts/mulish` and add it to the `useFonts` map — omitting it causes a yellow "fontFamily not found" warning and falls back to the system font for that weight.
+
+17. **`ConceptInput` has no `maxLength` hard-block.** The 140-character limit is enforced by the Zod schema (`.max(140)`), which triggers `errors.concept` via RHF `mode: 'onChange'`. The `Continuar` button gates on `!errors.concept`. Do not restore `maxLength` — it would prevent the user from seeing the red counter and the validation error.
 
 ---
 
@@ -301,17 +357,23 @@ Run before every PR / after any significant change:
 - [ ] `npm run lint` — 0 errors, 0 warnings
 - [ ] `npm run format:check` — no diffs
 - [ ] `npx tsc --noEmit` — 0 errors (strict mode)
-- [ ] App launches on iOS Simulator with splash screen then CreatePayment screen
+- [ ] App launches on iOS Simulator — splash holds until Mulish loads, then CreatePayment appears with Mulish font on all text
 - [ ] Header title is "Crear pago" on first load; becomes "Importe a pagar" after selecting a different currency
 - [ ] Header chip shows selected currency code (`EUR ▼`) and navigates to full-screen fiat selector
+- [ ] Header back button is the `arrow-left.svg` icon (not text `← Volver`)
 - [ ] "Selecciona una divisa" title renders on one line with back arrow visible below the notch
 - [ ] Searching a non-existent term shows "No se encontraron divisas" inline (no crash, no empty blank)
 - [ ] Selected currency in the list shows a ✓ indicator
-- [ ] Amount digits render in brand blue (`#035AC5`), cursor visible on Android
-- [ ] Empty `Continuar` button has background `#EAF3FF` and text `#71B0FD`
-- [ ] Entering an amount + concept enables the "Continuar" button (full brand blue)
+- [ ] Amount placeholder renders in brand blue (`#035AC5`) at ~40pt, cursor visible on Android
+- [ ] Empty `Continuar` button has background `#EAF3FF` and text `#71B0FD` (no shadow)
+- [ ] Entering amount ≤ 0 shows "El importe es obligatorio" / validation error, button disabled
+- [ ] Entering amount ≥ 50 000 shows "El monto máximo diario es de 50.000 €" (symbol updates when currency changes)
+- [ ] Entering a valid amount > 0 and concept ≤ 140 chars enables the "Continuar" button (full brand blue, flat)
+- [ ] Typing 141+ chars in Concepto turns counter red, shows error, disables Continuar; trimming re-enables it
+- [ ] Tapping Concepto field with keyboard open — Continuar button rises above keyboard and stays fully visible
+- [ ] Dismissing keyboard — Continuar button drops back above home indicator with no overlap
 - [ ] Tapping "Continuar" → SharePayment screen with correct amount displayed
-- [ ] `← Volver` back navigation works from all screens; no crash on empty stack
+- [ ] Back arrow navigates correctly from all screens; no crash on empty stack
 - [ ] QR tab renders the QR code for the payment identifier
 - [ ] Simulating a completed WS event navigates to PaymentSuccess with animation
 - [ ] "Nueva Solicitud" resets draft and returns to `/` with title "Crear pago"

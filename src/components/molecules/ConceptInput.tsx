@@ -1,7 +1,7 @@
-import React, { memo } from 'react';
-import { View, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { theme } from '@/theme';
 import { Typography } from '@/components/atoms/Typography';
+import { theme } from '@/theme';
+import React, { memo } from 'react';
+import { StyleSheet, TextInput, TextStyle, View, ViewStyle } from 'react-native';
 
 const MAX_LENGTH = 140;
 
@@ -25,24 +25,23 @@ export const ConceptInput = memo(function ConceptInput({
         <TextInput
           value={value}
           onChangeText={onChange}
-          maxLength={MAX_LENGTH}
           multiline
-          numberOfLines={3}
-          placeholder="Añade una descripción..."
+          maxLength={MAX_LENGTH}
+          placeholder="Añade descripción del pago"
           placeholderTextColor={theme.colors.neutral[300]}
           style={styles.input}
           textAlignVertical="top"
           selectionColor={theme.colors.primary[500]}
         />
-        <Typography
-          variant="caption"
-          color={value.length >= MAX_LENGTH ? theme.colors.danger[500] : theme.colors.textSecondary}
-          align="right"
-          style={styles.counter}
-        >
-          {value.length}/{MAX_LENGTH}
-        </Typography>
       </View>
+      <Typography
+        variant="caption"
+        color={value.length >= MAX_LENGTH ? theme.colors.danger[500] : theme.colors.textSecondary}
+        align="right"
+        style={styles.counter}
+      >
+        {`${value.length}/${MAX_LENGTH} caracteres`}
+      </Typography>
       {error ? (
         <Typography variant="caption" color={theme.colors.danger[500]}>
           {error}
@@ -75,7 +74,9 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 16,
     color: theme.colors.textPrimary,
-    minHeight: 72,
+    fontFamily: theme.fontFamilies.regular,
+    minHeight: 60,
+    maxHeight: 140,
     padding: 0,
   } as TextStyle,
   counter: {

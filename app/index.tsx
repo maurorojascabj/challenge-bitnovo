@@ -22,6 +22,14 @@ import {
 import { FIAT_CURRENCIES } from '@/constants/currencies';
 import { usePaymentStore } from '@/store/usePaymentStore';
 
+const MAX_AMOUNT = 50000;
+
+function parseAmount(masked: string): number {
+  const raw = masked.replace(/[^\d,.]/, '').replace(',', '.');
+  const num = parseFloat(raw);
+  return isNaN(num) ? 0 : num;
+}
+
 export default function CreatePaymentScreen() {
   const fiatKey = usePaymentStore((s) => s.draft.fiatKey);
   const currencyTouched = usePaymentStore((s) => s.draft.currencyTouched);
@@ -43,7 +51,15 @@ export default function CreatePaymentScreen() {
   });
 
   const amount = watch('amount');
-  const isContinueEnabled = amount.trim().length > 0 && !isLoading;
+  const numericAmount = parseAmount(amount);
+  const hasMaxError = numericAmount >= MAX_AMOUNT;
+
+  const amountError =
+    errors.amount?.message ??
+    (hasMaxError ? `El monto máximo diario es de 50.000 ${currency.symbol}` : undefined);
+
+  const isContinueEnabled =
+    amount.trim().length > 0 && !hasMaxError && !errors.amount && !errors.concept && !isLoading;
 
   const onSubmit = useCallback(
     async (values: CreatePaymentFormValues) => {
@@ -80,7 +96,18 @@ export default function CreatePaymentScreen() {
           </TouchableOpacity>
         }
       />
-      <ScreenContainer scrollable>
+      <ScreenContainer
+        scrollable
+        stickyFooter={
+          <Button
+            label="Continuar"
+            onPress={handleSubmit(onSubmit)}
+            fullWidth
+            disabled={!isContinueEnabled}
+            isLoading={isLoading}
+          />
+        }
+      >
         <View style={styles.amountSection}>
           <Typography variant="small" color={theme.colors.textSecondary} align="center">
             Introduce el importe
@@ -95,14 +122,11 @@ export default function CreatePaymentScreen() {
                 onChange={(_raw, masked) => onChange(masked)}
                 currency={currency.details}
                 symbol={currency.symbol}
-                error={errors.amount?.message}
+                error={amountError}
               />
             )}
           />
         </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
 
         <View style={styles.formSection}>
           {/* Concept input */}
@@ -118,17 +142,6 @@ export default function CreatePaymentScreen() {
             )}
           />
         </View>
-
-        {/* Sticky submit */}
-        <View style={styles.footer}>
-          <Button
-            label="Continuar"
-            onPress={handleSubmit(onSubmit)}
-            fullWidth
-            disabled={!isContinueEnabled}
-            isLoading={isLoading}
-          />
-        </View>
       </ScreenContainer>
 
       {/* Error toast */}
@@ -139,20 +152,12 @@ export default function CreatePaymentScreen() {
 
 const styles = StyleSheet.create({
   amountSection: {
-    paddingTop: theme.spacing.xxl,
+    paddingTop: theme.spacing.lg,
     alignItems: 'center',
-  } as ViewStyle,
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.xl,
   } as ViewStyle,
   formSection: {
     gap: theme.spacing.lg,
-  } as ViewStyle,
-  footer: {
-    paddingVertical: theme.spacing.xl,
-    marginTop: 'auto',
+    marginTop: theme.spacing.lg,
   } as ViewStyle,
   fiatChip: {
     flexDirection: 'row',

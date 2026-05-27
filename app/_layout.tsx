@@ -4,24 +4,33 @@ import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
+import {
+  useFonts,
+  Mulish_400Regular,
+  Mulish_600SemiBold,
+  Mulish_700Bold,
+} from '@expo-google-fonts/mulish';
 import { theme } from '@/theme';
 
 // Keep the splash screen visible while we load fonts / assets
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Mulish_400Regular,
+    Mulish_600SemiBold,
+    Mulish_700Bold,
+  });
+
   useEffect(() => {
-    // Preload fonts or any async assets here, then hide splash
-    async function prepare() {
-      try {
-        // Add any async pre-loading here (fonts, etc.)
-        await Promise.resolve(); // placeholder — replace with actual font loading
-      } finally {
-        await SplashScreen.hideAsync();
-      }
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
     }
-    prepare();
-  }, []);
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <SafeAreaProvider>

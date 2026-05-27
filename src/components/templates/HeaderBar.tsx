@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 import { Typography } from '@/components/atoms/Typography';
 import BitnovoLogo from '@/assets/svg/Bitnovo-logo.svg';
+import ArrowLeftIcon from '@/assets/svg/arrow-left.svg';
 
 interface HeaderBarProps {
   title?: string;
@@ -44,9 +45,7 @@ export const HeaderBar = memo(function HeaderBar({
         <View style={styles.sideLeft}>
           {showBack && (
             <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={8}>
-              <Typography variant="body" color={theme.colors.primary[500]}>
-                ← Volver
-              </Typography>
+              <ArrowLeftIcon width={28} height={28} />
             </TouchableOpacity>
           )}
         </View>

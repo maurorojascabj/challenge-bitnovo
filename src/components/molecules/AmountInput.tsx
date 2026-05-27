@@ -117,14 +117,15 @@ const styles = StyleSheet.create<{ container: ViewStyle; input: TextStyle }>({
   container: {
     width: '100%',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
   },
   input: {
-    fontSize: 52,
+    fontSize: 40,
     fontWeight: '700',
+    fontFamily: theme.fontFamilies.bold,
     color: theme.colors.primary[500],
     textAlign: 'center',
     minWidth: 120,
-    ...(Platform.OS === 'ios' ? { lineHeight: 64 } : { includeFontPadding: false }),
+    ...(Platform.OS === 'ios' ? { lineHeight: 48 } : { includeFontPadding: false }),
   },
 });

@@ -26,15 +26,8 @@ export const shadows = {
     default: {},
   }),
   button: Platform.select({
-    ios: {
-      shadowColor: '#035AC5',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-    },
-    android: {
-      elevation: 4,
-    },
+    ios: {},
+    android: {},
     default: {},
   }),
 } as const;
