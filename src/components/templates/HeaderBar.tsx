@@ -1,6 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 import { Typography } from '@/components/atoms/Typography';
 import BitnovoLogo from '@/assets/svg/Bitnovo-logo.svg';
@@ -20,53 +21,70 @@ export const HeaderBar = memo(function HeaderBar({
 }: HeaderBarProps) {
   const router = useRouter();
 
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }, [router]);
+
   return (
-    <View style={styles.container}>
-      {/* Left: back button */}
-      <View style={styles.side}>
-        {showBack && (
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} hitSlop={8}>
-            <Typography variant="body" color={theme.colors.primary[500]}>
-              ← Volver
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.row}>
+        {/* Absolutely centered title/logo — full row width, never squeezed by side elements */}
+        <View style={styles.center} pointerEvents="none">
+          {showLogo ? (
+            <BitnovoLogo width={120} height={32} />
+          ) : title ? (
+            <Typography variant="h3" align="center" numberOfLines={1}>
+              {title}
             </Typography>
-          </TouchableOpacity>
-        )}
-      </View>
+          ) : null}
+        </View>
 
-      {/* Center: logo or title */}
-      <View style={styles.center}>
-        {showLogo ? (
-          <BitnovoLogo width={120} height={32} />
-        ) : title ? (
-          <Typography variant="h3" align="center">
-            {title}
-          </Typography>
-        ) : null}
-      </View>
+        {/* Left: back button — rendered above the center layer */}
+        <View style={styles.sideLeft}>
+          {showBack && (
+            <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={8}>
+              <Typography variant="body" color={theme.colors.primary[500]}>
+                ← Volver
+              </Typography>
+            </TouchableOpacity>
+          )}
+        </View>
 
-      {/* Right */}
-      <View style={styles.side}>{rightElement}</View>
-    </View>
+        {/* Right — flex:1 pushes it to the right edge */}
+        <View style={styles.sideRight}>{rightElement}</View>
+      </View>
+    </SafeAreaView>
   );
 });
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  } as ViewStyle,
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
     minHeight: 56,
   } as ViewStyle,
-  side: {
-    flex: 1,
-  } as ViewStyle,
+  // Fills the entire row area; title text is padded inward to clear side buttons
   center: {
-    flex: 2,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 96,
+  } as ViewStyle,
+  sideLeft: {
+    zIndex: 1,
+  } as ViewStyle,
+  sideRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+    zIndex: 1,
   } as ViewStyle,
   backButton: {
     alignSelf: 'flex-start',

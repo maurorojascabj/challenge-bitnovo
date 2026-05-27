@@ -49,8 +49,11 @@ npx tsc --noEmit
 |---|---|---|
 | Styles | StyleSheet + typed `theme` module | Strong typing, zero build-config surface, Reanimated 4 worklet-safe, perf |
 | State | Zustand v5 (slice-per-concern) | Selector subscriptions, zero boilerplate, no Provider tree |
-| Country/fiat picker | Custom `SelectorModal` | Reused for both fiat + country; uses SVG flags already in project; no new-arch friction |
+| Fiat picker | Full-screen route (`selectors/fiat`) | No `<Modal>-inside-route` friction; uses `router.canGoBack()` guard; reuses `HeaderBar` + `ScreenContainer` |
+| Country picker | `SelectorModal` bottom-sheet | WhatsApp-only flow; SVG flags already in project; modal presentation suits one-off selection |
 | Device ID | Centralized `X-Device-Id` header | Single source in axios interceptor + WS URL, sourced from `EXPO_PUBLIC_DEVICE_ID` |
+| Safe area | `SafeAreaProvider` at root + `edges` per layer | Provider in `_layout.tsx`; `HeaderBar` uses `edges={['top']}`, `ScreenContainer` uses `edges={['bottom']}` — no double-wrapping |
+| Header layout | `absoluteFillObject` center + flex sides | Title spans full row width; side buttons never squeeze the center; `pointerEvents="none"` lets taps reach side elements |
 
 ---
 
@@ -64,8 +67,8 @@ app/                         # expo-router file-based routes
   qr/[id].tsx                # QR screen (WS subscription)
   success.tsx                # PaymentSuccess screen (AnimatedSuccess)
   selectors/
-    fiat.tsx                 # Full-screen fiat selector (modal stack)
-    country.tsx              # Full-screen country selector (modal stack)
+    fiat.tsx                 # Full-screen fiat selector (slide_from_right push, not modal)
+    country.tsx              # Full-screen country selector (modal bottom-sheet)
 
 src/
   components/
@@ -107,12 +110,12 @@ src/
       WebSocketClient.ts     # Generic WebSocketClient<TEvent>, exponential backoff, lifecycle states
       index.ts
   store/
-    usePaymentStore.ts       # draft: { amount, fiatKey, concept }, resetDraft
+    usePaymentStore.ts       # draft: { amount, fiatKey, concept, currencyTouched }, resetDraft
     useOrderStore.ts         # order: Order | null, setOrder, updateStatus, clearOrder
     useCountrySelectionStore.ts  # Transient one-shot for WhatsApp country selection
     index.ts
   theme/
-    colors.ts                # primary[50-900] (500=#035AC5), neutral, semantic tokens
+    colors.ts                # primary[50-900] (500=#035AC5), neutral, semantic tokens (incl. buttonDisabledBg/Text)
     spacing.ts               # xxs:2 … huge:64
     radius.ts                # xs:4 … pill:999
     typography.ts            # display, h1-h3, body, small, caption + Semibold variants
@@ -177,6 +180,7 @@ borderRadius: theme.radius.md               // 12
 
 - `useTheme()` hook exported from `src/theme/index.ts` — reserved for future dark-mode swap; currently returns the static `theme` object.
 - **To add a token:** edit the relevant `src/theme/*.ts` file, keep `as const`, update the exported `Type` if needed. Types propagate automatically to every consumer.
+- Button disabled state uses `theme.colors.buttonDisabledBg` (`#EAF3FF`) and `theme.colors.buttonDisabledText` (`#71B0FD`) — spec-exact values, not neutral grays.
 
 ---
 
@@ -231,6 +235,14 @@ Conventions for every component:
 1. Define a Zod schema in `src/features/<feature>/schemas/`.
 2. `useForm<T>({ resolver: zodResolver(schema) })` with strict generic.
 3. Render controlled inputs with `<Controller>` — RHF is the single source of truth for field values.
+4. **Do not put store-managed fields into the schema.** If a value lives in Zustand (e.g. `fiatKey`), read it from the store at submit time instead of adding it to the form. Duplication causes silent desync (see gotcha 14).
+
+### Add a full-screen selector route
+
+1. Create `app/selectors/<name>.tsx` with `<HeaderBar title="..." showBack />` + `<ScreenContainer padded={false}>`.
+2. Add a `<Stack.Screen name="selectors/<name>" />` to `app/_layout.tsx` — use default `slide_from_right` (not `modal`) so `router.canGoBack()` works reliably.
+3. On selection: write to the relevant store slice, then `router.back()`.
+4. Navigate to it via `router.push('/selectors/<name>')` — use a header chip or `TouchableOpacity` in `rightElement`.
 
 ### Add an SVG asset
 
@@ -262,6 +274,14 @@ Conventions for every component:
 
 10. **Two Metro instances on the same port** is the most common cause of "A dev server is already running on port 8081". Fix: `lsof -ti:8081 | xargs kill -9`, or start with `--port 8082`.
 
+11. **`router.back()` without a guard silently no-ops on an empty stack.** Always call `router.canGoBack()` first; fall back to `router.replace('/')`. `HeaderBar` already implements this pattern — do not bypass it.
+
+12. **Long header titles wrap when the center is a flex child.** `HeaderBar` places the title in a `StyleSheet.absoluteFillObject` view with `pointerEvents="none"`, so the title spans the full row width regardless of side-button widths. Never convert the center slot back to a flex child — it will squeeze long titles like "Selecciona una divisa".
+
+13. **`SafeAreaProvider` must be the outermost wrapper in `_layout.tsx`.** Without it, `useSafeAreaInsets` and `SafeAreaView edges` fall back to zero insets and the header overlaps the notch. `HeaderBar` handles `edges={['top']}` and `ScreenContainer` handles `edges={['bottom']}` — no other screen needs an additional `SafeAreaView`.
+
+14. **Do not duplicate store state inside RHF.** The `fiat` field was previously in both the schema and `usePaymentStore`, causing silent desync. If a value is managed by a Zustand slice, read it from the store at submit time — keep it out of the form schema entirely.
+
 ---
 
 ## External references
@@ -282,9 +302,18 @@ Run before every PR / after any significant change:
 - [ ] `npm run format:check` — no diffs
 - [ ] `npx tsc --noEmit` — 0 errors (strict mode)
 - [ ] App launches on iOS Simulator with splash screen then CreatePayment screen
-- [ ] Entering an amount + concept enables the "Continuar" button
+- [ ] Header title is "Crear pago" on first load; becomes "Importe a pagar" after selecting a different currency
+- [ ] Header chip shows selected currency code (`EUR ▼`) and navigates to full-screen fiat selector
+- [ ] "Selecciona una divisa" title renders on one line with back arrow visible below the notch
+- [ ] Searching a non-existent term shows "No se encontraron divisas" inline (no crash, no empty blank)
+- [ ] Selected currency in the list shows a ✓ indicator
+- [ ] Amount digits render in brand blue (`#035AC5`), cursor visible on Android
+- [ ] Empty `Continuar` button has background `#EAF3FF` and text `#71B0FD`
+- [ ] Entering an amount + concept enables the "Continuar" button (full brand blue)
 - [ ] Tapping "Continuar" → SharePayment screen with correct amount displayed
+- [ ] `← Volver` back navigation works from all screens; no crash on empty stack
 - [ ] QR tab renders the QR code for the payment identifier
 - [ ] Simulating a completed WS event navigates to PaymentSuccess with animation
+- [ ] "Nueva Solicitud" resets draft and returns to `/` with title "Crear pago"
 - [ ] Offline mode shows error Toast (not a crash)
 - [ ] No Reanimated / new-arch warnings in Metro or device logs

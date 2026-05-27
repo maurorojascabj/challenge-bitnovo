@@ -101,6 +101,7 @@ export const AmountInput = memo(function AmountInput({
         placeholderTextColor={theme.colors.neutral[300]}
         textAlign="center"
         selectionColor={theme.colors.primary[500]}
+        cursorColor={theme.colors.primary[500]}
         autoFocus
       />
       {error ? (
@@ -121,7 +122,7 @@ const styles = StyleSheet.create<{ container: ViewStyle; input: TextStyle }>({
   input: {
     fontSize: 52,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
+    color: theme.colors.primary[500],
     textAlign: 'center',
     minWidth: 120,
     ...(Platform.OS === 'ios' ? { lineHeight: 64 } : { includeFontPadding: false }),

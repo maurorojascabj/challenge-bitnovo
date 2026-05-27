@@ -45,6 +45,8 @@ export const colors = {
   textDisabled: '#9CA3AF',
   border: '#E5E7EB',
   transparent: 'transparent',
+  buttonDisabledBg: '#EAF3FF',
+  buttonDisabledText: '#71B0FD',
 } as const;
 
 export type Colors = typeof colors;

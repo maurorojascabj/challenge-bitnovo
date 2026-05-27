@@ -8,7 +8,6 @@ export const createPaymentSchema = z.object({
       const num = parseFloat(v.replace(/[^0-9.,]/g, '').replace(',', '.'));
       return !isNaN(num) && num > 0;
     }, 'El importe debe ser mayor que 0'),
-  fiat: z.enum(['EUR', 'USD', 'GBP']),
   concept: z.string().max(140, 'El concepto no puede superar los 140 caracteres').optional(),
 });
 

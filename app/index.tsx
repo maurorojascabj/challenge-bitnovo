@@ -1,69 +1,85 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { router } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { router } from 'expo-router';
+import React, { useCallback } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { StyleSheet, View, ViewStyle, TouchableOpacity } from 'react-native';
 
-import { theme } from '@/theme';
-import { ScreenContainer } from '@/components/templates/ScreenContainer';
-import { HeaderBar } from '@/components/templates/HeaderBar';
-import { AmountInput } from '@/components/molecules/AmountInput';
-import { ConceptInput } from '@/components/molecules/ConceptInput';
-import { SelectorRow } from '@/components/molecules/SelectorRow';
 import { Button } from '@/components/atoms/Button';
 import { Typography } from '@/components/atoms/Typography';
+import { AmountInput } from '@/components/molecules/AmountInput';
+import { ConceptInput } from '@/components/molecules/ConceptInput';
 import { Toast } from '@/components/organisms/Toast';
-import { SelectorModal } from '@/components/organisms/SelectorModal';
+import { HeaderBar } from '@/components/templates/HeaderBar';
+import { ScreenContainer } from '@/components/templates/ScreenContainer';
+import { theme } from '@/theme';
 
-import {
-  createPaymentSchema,
-  CreatePaymentFormValues,
-} from '@/features/payments/schemas/createPayment.schema';
 import { useCreatePayment } from '@/features/payments/hooks/useCreatePayment';
+import {
+  CreatePaymentFormValues,
+  createPaymentSchema,
+} from '@/features/payments/schemas/createPayment.schema';
 
-import { FIAT_CURRENCIES, FIAT_CURRENCY_LIST, FiatKey, FiatCurrency } from '@/constants/currencies';
+import { FIAT_CURRENCIES } from '@/constants/currencies';
+import { usePaymentStore } from '@/store/usePaymentStore';
 
 export default function CreatePaymentScreen() {
-  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const fiatKey = usePaymentStore((s) => s.draft.fiatKey);
+  const currencyTouched = usePaymentStore((s) => s.draft.currencyTouched);
+  const currency = FIAT_CURRENCIES[fiatKey];
+
+  const title = currencyTouched ? 'Importe a pagar' : 'Crear pago';
+
   const { isLoading, error, submit } = useCreatePayment();
 
   const {
     control,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<CreatePaymentFormValues>({
     resolver: zodResolver(createPaymentSchema),
-    defaultValues: { amount: '', fiat: 'EUR', concept: '' },
+    defaultValues: { amount: '', concept: '' },
     mode: 'onChange',
   });
 
-  const selectedFiat = watch('fiat') as FiatCurrency;
-  const selectedFiatKey = selectedFiat.toLowerCase() as FiatKey;
-  const currency = FIAT_CURRENCIES[selectedFiatKey];
+  const amount = watch('amount');
+  const isContinueEnabled = amount.trim().length > 0 && !isLoading;
 
   const onSubmit = useCallback(
     async (values: CreatePaymentFormValues) => {
       const rawAmount = values.amount.replace(/[^\d,.]/, '').replace(',', '.');
       const identifier = await submit({
         expected_output_amount: parseFloat(rawAmount),
-        fiat: values.fiat,
+        fiat: currency.details,
         notes: values.concept,
       });
       if (identifier) {
         router.push(`/share/${identifier}`);
       }
     },
-    [submit]
+    [submit, currency.details]
   );
-
-  const amount = watch('amount');
-  const isContinueEnabled = amount.trim().length > 0 && !isLoading;
 
   return (
     <>
-      <HeaderBar title="Solicitar pago" />
+      <HeaderBar
+        title={title}
+        rightElement={
+          <TouchableOpacity
+            onPress={() => router.push('/selectors/fiat')}
+            style={styles.fiatChip}
+            hitSlop={8}
+            activeOpacity={0.7}
+          >
+            <Typography variant="bodySemibold" color={theme.colors.primary[500]}>
+              {currency.details}
+            </Typography>
+            <Typography variant="caption" color={theme.colors.primary[500]}>
+              {' ▼'}
+            </Typography>
+          </TouchableOpacity>
+        }
+      />
       <ScreenContainer scrollable>
         <View style={styles.amountSection}>
           <Typography variant="small" color={theme.colors.textSecondary} align="center">
@@ -77,7 +93,7 @@ export default function CreatePaymentScreen() {
               <AmountInput
                 value={value}
                 onChange={(_raw, masked) => onChange(masked)}
-                currency={selectedFiat}
+                currency={currency.details}
                 symbol={currency.symbol}
                 error={errors.amount?.message}
               />
@@ -89,28 +105,18 @@ export default function CreatePaymentScreen() {
         <View style={styles.divider} />
 
         <View style={styles.formSection}>
-          {/* Currency selector */}
-          <SelectorRow
-            icon={<currency.icon width={28} height={28} />}
-            title={currency.title}
-            detail={currency.details}
-            onPress={() => setShowCurrencyModal(true)}
-          />
-
           {/* Concept input */}
-          <View style={styles.conceptWrapper}>
-            <Controller
-              control={control}
-              name="concept"
-              render={({ field: { value, onChange } }) => (
-                <ConceptInput
-                  value={value ?? ''}
-                  onChange={onChange}
-                  error={errors.concept?.message}
-                />
-              )}
-            />
-          </View>
+          <Controller
+            control={control}
+            name="concept"
+            render={({ field: { value, onChange } }) => (
+              <ConceptInput
+                value={value ?? ''}
+                onChange={onChange}
+                error={errors.concept?.message}
+              />
+            )}
+          />
         </View>
 
         {/* Sticky submit */}
@@ -124,17 +130,6 @@ export default function CreatePaymentScreen() {
           />
         </View>
       </ScreenContainer>
-
-      {/* Currency selector modal */}
-      <SelectorModal
-        visible={showCurrencyModal}
-        items={FIAT_CURRENCY_LIST}
-        title="Selecciona una divisa"
-        onSelect={(item) =>
-          setValue('fiat', item.details as FiatCurrency, { shouldValidate: true })
-        }
-        onClose={() => setShowCurrencyModal(false)}
-      />
 
       {/* Error toast */}
       <Toast message={error?.message ?? ''} type="error" visible={!!error} />
@@ -155,11 +150,20 @@ const styles = StyleSheet.create({
   formSection: {
     gap: theme.spacing.lg,
   } as ViewStyle,
-  conceptWrapper: {
-    marginTop: theme.spacing.sm,
-  } as ViewStyle,
   footer: {
     paddingVertical: theme.spacing.xl,
     marginTop: 'auto',
+  } as ViewStyle,
+  fiatChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary[200],
+    backgroundColor: theme.colors.primary[50],
   } as ViewStyle,
 });

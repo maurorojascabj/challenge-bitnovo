@@ -50,7 +50,9 @@ export const Button = memo(function Button({
     >
       {isLoading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? theme.colors.neutral[0] : theme.colors.primary[500]}
+          color={
+            variant === 'primary' ? theme.colors.buttonDisabledText : theme.colors.primary[500]
+          }
           size="small"
         />
       ) : (
@@ -66,7 +68,7 @@ export const Button = memo(function Button({
 });
 
 function getTextColor(variant: ButtonVariant, disabled: boolean): string {
-  if (disabled) return theme.colors.textDisabled;
+  if (disabled) return theme.colors.buttonDisabledText;
   switch (variant) {
     case 'primary':
       return theme.colors.neutral[0];
@@ -116,7 +118,7 @@ const styles = StyleSheet.create<{
     backgroundColor: theme.colors.danger[500],
   },
   disabled: {
-    backgroundColor: theme.colors.neutral[100],
+    backgroundColor: theme.colors.buttonDisabledBg,
     borderWidth: 0,
   },
   fullWidth: {

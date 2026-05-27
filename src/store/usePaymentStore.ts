@@ -5,6 +5,7 @@ interface PaymentDraft {
   amount: string;
   fiatKey: FiatKey;
   concept: string;
+  currencyTouched: boolean;
 }
 
 interface PaymentStore {
@@ -19,6 +20,7 @@ const INITIAL_DRAFT: PaymentDraft = {
   amount: '',
   fiatKey: DEFAULT_FIAT,
   concept: '',
+  currencyTouched: false,
 };
 
 export const usePaymentStore = create<PaymentStore>((set) => ({
@@ -26,7 +28,7 @@ export const usePaymentStore = create<PaymentStore>((set) => ({
 
   setAmount: (amount) => set((s) => ({ draft: { ...s.draft, amount } })),
 
-  setFiatKey: (fiatKey) => set((s) => ({ draft: { ...s.draft, fiatKey } })),
+  setFiatKey: (fiatKey) => set((s) => ({ draft: { ...s.draft, fiatKey, currencyTouched: true } })),
 
   setConcept: (concept) => set((s) => ({ draft: { ...s.draft, concept } })),
 
