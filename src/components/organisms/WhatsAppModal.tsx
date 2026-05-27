@@ -7,8 +7,8 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 import { Typography } from '@/components/atoms/Typography';
 import { Button } from '@/components/atoms/Button';

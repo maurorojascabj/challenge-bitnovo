@@ -1,4 +1,4 @@
-import EspanaIcon from '@/assets/svg/españa.svg';
+import EspanaIcon from '@/assets/svg/espana.svg';
 import GuineaIcon from '@/assets/svg/guinea.svg';
 import GreciaIcon from '@/assets/svg/grecia.svg';
 import GbpIcon from '@/assets/svg/gbp.svg'; // Georgia uses gbp icon per spec
