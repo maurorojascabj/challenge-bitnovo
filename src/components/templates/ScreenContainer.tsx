@@ -112,6 +112,7 @@ const styles = StyleSheet.create<{
   },
   footer: {
     paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
   },
   pressableFill: {
     flex: 1,
