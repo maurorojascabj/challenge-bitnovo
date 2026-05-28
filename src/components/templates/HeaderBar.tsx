@@ -35,7 +35,13 @@ export const HeaderBar = memo(function HeaderBar({
           {showLogo ? (
             <BitnovoLogo width={120} height={32} />
           ) : title ? (
-            <Typography variant="h3" align="center" numberOfLines={1}>
+            <Typography
+              variant="h3"
+              align="center"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               {title}
             </Typography>
           ) : null}

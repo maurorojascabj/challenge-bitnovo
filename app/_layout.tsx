@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
+import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
@@ -40,6 +41,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      {/* dark = dark icons (time, battery) visible on the light app background.
+          translucent is the default with edgeToEdgeEnabled: true — no extra prop needed. */}
+      <StatusBar style="dark" />
       <GestureHandlerRootView style={styles.root}>
         <Stack
           screenOptions={{

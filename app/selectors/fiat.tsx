@@ -112,6 +112,7 @@ export default function FiatSelectorScreen() {
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          style={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Typography variant="bodySemibold" align="center" color={theme.colors.textSecondary}>
@@ -168,6 +169,9 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  } as ViewStyle,
+  list: {
+    flex: 1,
   } as ViewStyle,
   emptyState: {
     paddingVertical: theme.spacing.xxxl,
