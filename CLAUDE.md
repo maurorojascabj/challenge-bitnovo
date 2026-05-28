@@ -57,6 +57,8 @@ npx tsc --noEmit
 | Header layout | `absoluteFillObject` center + flex sides | Title spans full row width; side buttons never squeeze the center; `pointerEvents="none"` lets taps reach side elements |
 | Typography | Mulish via `@expo-google-fonts/mulish` | Loaded in `_layout.tsx` with `useFonts`; splash held until fonts ready; `fontFamily` set per variant in `theme/typography.ts`; no inline font strings anywhere |
 | Button shadow | Flat (`theme.shadows.button` is empty) | Spec requires no shadow on the primary CTA; token kept for API stability |
+| Stack reset | `CommonActions.reset({ index: 0, routes: [{ name: 'index' }] })` via `useNavigation` | Used in "Finalizar" (`success.tsx`) and "Nueva solicitud" / "Entendido" (`share/[id].tsx`) so the Android back button cannot navigate back to terminal screens after the flow completes. `router.replace('/')` does NOT clear the back stack. |
+| Status bar | `<StatusBar style="dark" />` from `expo-status-bar` in `_layout.tsx` | `edgeToEdgeEnabled: true` makes the bar transparent; `style="dark"` ensures dark icons (time, battery) are visible on the app's light background. Individual screens with a dark background (e.g. QR) should override with `style="light"`. |
 
 ---
 
@@ -64,7 +66,7 @@ npx tsc --noEmit
 
 ```
 app/                         # expo-router file-based routes
-  _layout.tsx                # Root Stack, GestureHandlerRootView, SplashScreen guard, Mulish useFonts
+  _layout.tsx                # Root Stack, GestureHandlerRootView, SplashScreen guard, Mulish useFonts, StatusBar style="dark"
   index.tsx                  # CreatePayment screen (RHF form, amount/max validation, stickyFooter)
   share/[id].tsx             # SharePayment screen — headerless, PaymentSummaryCard + vertical ShareRows + inline WhatsApp form; WS subscription
   qr/[id].tsx                # QR screen — blue background, info banner, QRCard with Bitnovo logo overlay; WS subscription
@@ -351,7 +353,7 @@ Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers bot
 
 11. **`router.back()` without a guard silently no-ops on an empty stack.** Always call `router.canGoBack()` first; fall back to `router.replace('/')`. `HeaderBar` already implements this pattern — do not bypass it.
 
-12. **Long header titles wrap when the center is a flex child.** `HeaderBar` places the title in a `StyleSheet.absoluteFillObject` view with `pointerEvents="none"`, so the title spans the full row width regardless of side-button widths. Never convert the center slot back to a flex child — it will squeeze long titles like "Selecciona una divisa".
+12. **Long header titles wrap when the center is a flex child.** `HeaderBar` places the title in a `StyleSheet.absoluteFillObject` view with `pointerEvents="none"`, so the title spans the full row width regardless of side-button widths. Never convert the center slot back to a flex child — it will squeeze long titles like "Selecciona una divisa". The `Typography` in the center slot uses `adjustsFontSizeToFit` + `minimumFontScale={0.75}` + `numberOfLines={1}` so titles shrink instead of truncating with ellipsis on small screens.
 
 13. **`SafeAreaProvider` must be the outermost wrapper in `_layout.tsx`.** Without it, `useSafeAreaInsets` and `SafeAreaView edges` fall back to zero insets and the header overlaps the notch. `HeaderBar` handles `edges={['top']}` and `ScreenContainer` handles `edges={['bottom']}` (standard path) — no other screen needs an additional `SafeAreaView`.
 
@@ -369,13 +371,26 @@ Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers bot
 
 20. **`softwareKeyboardLayoutMode: 'pan'` is required in `app.config.ts` for `useAnimatedKeyboard()` to work correctly on Android with `edgeToEdgeEnabled: true`.** In `resize` mode (the default), the OS already shrinks the app window when the keyboard opens — applying `useAnimatedKeyboard`'s padding on top of that double-pads the layout and pushes content too high. In `pan` mode the window stays full-height and the keyboard height is tracked purely as an inset by Reanimated. Do NOT change this value without retesting the sticky-footer layout on Android (both gesture-nav and 3-button-nav).
 
-21. **Splash assets live in `assets/images/` and require a native rebuild to take effect.** `splash-icon.png` must be white on a transparent background (the `backgroundColor: '#035AC5'` in `app.config.ts` fills the full screen; the plugin composites the icon on top). After replacing any asset in `assets/images/`, run `pnpm ios` or `pnpm android` — a Metro-only reload does NOT pick up new splash or icon PNGs. To regenerate the assets from the SVG source, run `node scripts/generate-splash-assets.mjs`. Expo Go does not render the project splash — use a dev-client (`pnpm ios` / `pnpm android`) or a release build for splash validation. The splash is brief in dev (~300 ms with cached fonts); this is expected — do not add artificial delays in production.
+21. **Splash and icon assets live in `assets/images/` and require a native rebuild to take effect.** Current branded assets:
+   - `splash-icon.png` — 1024×1024, brand blue (`#035AC5`) background, navy circle with white B coin mark + cyan dot. `app.config.ts` has `imageBackgroundColor: '#035AC5'` to match the Android 12+ squircle container to the splash background.
+   - `icon.png` — 1024×1024, white background, same Bitnovo B mark. Used as iOS launcher icon.
+   - `android-icon-foreground.png` — 1024×1024, same blue background + B mark at scale 26 (within the 66% adaptive icon safe zone). `app.config.ts` adaptive icon uses `backgroundColor: '#035AC5'` (no `backgroundImage`).
+   - The Expo placeholder files (`android-icon-background.png`, `android-icon-monochrome.png`, `react-logo*.png`, `partial-react-logo.png`) have been deleted.
+   After replacing any asset in `assets/images/`, run `pnpm ios` or `pnpm android` — a Metro-only reload does NOT pick up new PNGs. Expo Go does not render the project splash — use a dev-client or release build for splash validation. The splash is brief in dev (~300 ms with cached fonts); this is expected — do not add artificial delays.
 
 22. **Package manager is pnpm — run `corepack enable` once per machine.** The `packageManager` field in `package.json` pins `pnpm@9.15.0`. Corepack (bundled with Node 20+) enforces this automatically. If you don't have Corepack, run `npm install -g pnpm@9.15.0` as a fallback. `.npmrc` sets `node-linker=hoisted` so Metro and Expo plugins can resolve peer deps via the flat `node_modules` tree (strict pnpm mode breaks Metro resolution for several RN/Expo packages). Do NOT remove `node-linker=hoisted` without retesting on both iOS and Android.
 
-22. **`expo-blur` BlurView on Android 11 and below shows a semi-opaque fallback.** On Android 12+ (API 31+), `BlurView` uses `RenderEffect` for GPU-accelerated blur. On Android 11 and below, `expo-blur` falls back to a translucent overlay automatically — the blur effect is absent but the modal is still usable. The project `minSdkVersion` is API 24 (Expo SDK 54 default); the fallback is accepted. A color tint (`rgba(30,214,235,0.10)`) is applied via an absolutely-positioned `View` on top of `BlurView` for visual consistency.
+23. **`expo-blur` BlurView on Android 11 and below shows a semi-opaque fallback.** On Android 12+ (API 31+), `BlurView` uses `RenderEffect` for GPU-accelerated blur. On Android 11 and below, `expo-blur` falls back to a translucent overlay automatically — the blur effect is absent but the modal is still usable. The project `minSdkVersion` is API 24 (Expo SDK 54 default); the fallback is accepted. A color tint (`rgba(30,214,235,0.10)`) is applied via an absolutely-positioned `View` on top of `BlurView` for visual consistency.
 
-23. **Android New Arch + `FormData` = network failure.** With `newArchEnabled: true`, React Native's networking layer (both XHR and `fetch` adapters) does not correctly serialize `FormData._parts` into a multipart body on Android, producing `ERR_NETWORK` or `TypeError: Network request failed` before any HTTP response. iOS is unaffected. The root cause was confirmed by: URLSearchParams reaching the server (HTTP 500 — wrong format) while FormData never reached it. Fix: build the multipart body manually as a string with an explicit boundary in `createPayment` — see `src/features/payments/api/paymentsApi.ts`. Do not revert to `new FormData()` for this endpoint unless the underlying RN New Arch networking bug is resolved upstream.
+24. **Android New Arch + `FormData` = network failure.** With `newArchEnabled: true`, React Native's networking layer (both XHR and `fetch` adapters) does not correctly serialize `FormData._parts` into a multipart body on Android, producing `ERR_NETWORK` or `TypeError: Network request failed` before any HTTP response. iOS is unaffected. The root cause was confirmed by: URLSearchParams reaching the server (HTTP 500 — wrong format) while FormData never reached it. Fix: build the multipart body manually as a string with an explicit boundary in `createPayment` — see `src/features/payments/api/paymentsApi.ts`. Do not revert to `new FormData()` for this endpoint unless the underlying RN New Arch networking bug is resolved upstream.
+
+25. **`router.replace('/')` does NOT clear the Android back stack — use `CommonActions.reset`.** After terminal actions (payment success, new request), calling `router.replace('/')` replaces the current route but leaves previous routes in the stack. The Android back button can still navigate back to the share/success screens. Fix: `navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'index' }] }))` where `navigation = useNavigation()` from `expo-router`. This resets the stack to only the root screen. `CommonActions` is from `@react-navigation/native` (already a transitive dependency of Expo Router — no extra install).
+
+26. **Transparent modals on `edgeToEdgeEnabled: true` Android need `insets.bottom` to clear the navigation bar.** `Modal` with `transparent` renders over the navigation bar area on edge-to-edge builds. A hardcoded `paddingBottom` is not enough on devices with tall nav bars (3-button nav ≈ 48dp). Pattern: `paddingBottom: insets.bottom + theme.spacing.xl` where `insets = useSafeAreaInsets()`. This works on both iOS (home indicator) and Android (nav bar). Applied in `share/[id].tsx` WhatsApp success modal.
+
+27. **`FlatList` inside `ScreenContainer` (non-scrollable path) needs `style={{ flex: 1 }}`.** Without it the list tries to take its full content height, overflows the parent, and items below the fold are not reachable on small screens. The `ScreenContainer` inner `View` is already `flex: 1`; the `FlatList` must also be `flex: 1` to fill the remaining space after sibling elements (e.g. a search bar). Applied in `app/selectors/fiat.tsx` and `app/selectors/country.tsx`.
+
+28. **Sticky footer `paddingBottom` in `ScreenContainer` is `theme.spacing.md` (12px) above the safe area / keyboard inset.** The `Animated.View` handles `Math.max(keyboard.height, insets.bottom)` for safe-area and keyboard clearance. The `footer` View adds `paddingBottom: theme.spacing.md` on top for visual breathing room between the button and the navigation bar. This is additive and correct in both keyboard-open and keyboard-closed states.
 
 ---
 
@@ -395,11 +410,13 @@ Run before every PR / after any significant change:
 - [ ] `npm run lint` — 0 errors, 0 warnings
 - [ ] `npm run format:check` — no diffs
 - [ ] `npx tsc --noEmit` — 0 errors (strict mode)
-- [ ] App launches on iOS Simulator — splash holds until Mulish loads, then CreatePayment appears with Mulish font on all text
+- [ ] App launches on iOS Simulator — branded Bitnovo splash (navy circle with white B + cyan dot on `#035AC5`) holds until Mulish loads, then CreatePayment appears with Mulish font on all text
+- [ ] App launcher icon shows the Bitnovo B mark (not the Expo "A" placeholder) on iOS and Android
+- [ ] Status bar time and battery icons are visible on all screens (dark icons on light background; `style="dark"` via `expo-status-bar`)
 - [ ] Header title is "Crear pago" on first load; becomes "Importe a pagar" after selecting a different currency
 - [ ] Header chip shows selected currency code (`EUR ▼`) and navigates to full-screen fiat selector
 - [ ] Header back button is the `arrow-left.svg` icon (not text `← Volver`)
-- [ ] "Selecciona una divisa" title renders on one line with back arrow visible below the notch
+- [ ] "Selecciona una divisa" title renders on one line (shrinks via `adjustsFontSizeToFit` on small screens, never truncates with ellipsis)
 - [ ] Searching a non-existent term shows "No se encontraron divisas" inline (no crash, no empty blank)
 - [ ] Selected currency in the list shows a ✓ indicator
 - [ ] Amount placeholder (`0,00` EUR / `0.00` USD·GBP) renders in brand blue (`#035AC5`) at ~40pt; symbol always visible beside the input
@@ -427,13 +444,16 @@ Run before every PR / after any significant change:
 - [ ] WhatsApp row: country chip shows `+34 ▼` by default; tapping it pushes `/selectors/country` via slide_from_right
 - [ ] Country selector: search filters by name + code, ✓ marks selected, "No se encontraron países" on empty
 - [ ] WhatsApp Enviar disabled when phone empty; after sending shows "Solicitud enviada" bottom-sheet modal
-- [ ] "Entendido" in the modal calls router.replace('/') and resets country store to default (+34)
+- [ ] "Entendido" in the WhatsApp success modal resets the navigation stack to root (Android back button cannot go back to share screen) and resets country store to default (+34)
+- [ ] WhatsApp success modal card is fully visible above the Android navigation bar (not overlapped)
 - [ ] "Nueva solicitud" button has WalletAddIcon on the RIGHT of the label
 - [ ] QR screen: full blue (primary[500]) background below white HeaderBar
 - [ ] QR screen: info banner with info-circle.svg icon; Bitnovo-logo.svg centred in QR; amount in white; subtitle in primary[200]
 - [ ] QR code is scannable despite logo overlay (ecl=H)
 - [ ] Success screen shows tick-circle-green.svg (120×120), title "Pago recibido", subtitle "El pago se ha confirmado con éxito", ghost "Finalizar" button at bottom (no amount shown)
 - [ ] Simulating a completed WS event navigates to PaymentSuccess
-- [ ] "Nueva Solicitud" resets draft and returns to `/` with title "Crear pago"
+- [ ] "Nueva solicitud" resets draft, resets the navigation stack to root, and returns to `/` with title "Crear pago" — Android back button cannot navigate back to share screen
+- [ ] "Finalizar" on success screen resets the navigation stack to root — Android back button cannot navigate back to success screen
+- [ ] Fiat and country selector lists fill the full available screen height (no items cut off on small screens)
 - [ ] Offline mode shows error Toast (not a crash)
 - [ ] No Reanimated / new-arch warnings in Metro or device logs
