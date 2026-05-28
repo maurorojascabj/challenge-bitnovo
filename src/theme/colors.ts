@@ -47,6 +47,7 @@ export const colors = {
   transparent: 'transparent',
   buttonDisabledBg: '#EAF3FF',
   buttonDisabledText: '#71B0FD',
+  placeholderAmount: '#C0CCDA',
 } as const;
 
 export type Colors = typeof colors;

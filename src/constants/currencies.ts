@@ -11,6 +11,8 @@ export interface CurrencyItem {
   details: FiatCurrency;
   symbol: string;
   decimal: number;
+  locale: string;
+  symbolPosition: 'left' | 'right';
 }
 
 export const FIAT_CURRENCIES: Record<FiatKey, CurrencyItem> = {
@@ -20,6 +22,8 @@ export const FIAT_CURRENCIES: Record<FiatKey, CurrencyItem> = {
     details: 'EUR',
     symbol: '€',
     decimal: 2,
+    locale: 'es-ES',
+    symbolPosition: 'right',
   },
   usd: {
     icon: UsdIcon,
@@ -27,6 +31,8 @@ export const FIAT_CURRENCIES: Record<FiatKey, CurrencyItem> = {
     details: 'USD',
     symbol: '$',
     decimal: 2,
+    locale: 'en-US',
+    symbolPosition: 'left',
   },
   gbp: {
     icon: GbpIcon,
@@ -34,6 +40,8 @@ export const FIAT_CURRENCIES: Record<FiatKey, CurrencyItem> = {
     details: 'GBP',
     symbol: '£',
     decimal: 2,
+    locale: 'en-GB',
+    symbolPosition: 'left',
   },
 } as const;
 

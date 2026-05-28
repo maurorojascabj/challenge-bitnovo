@@ -21,14 +21,7 @@ import {
 
 import { FIAT_CURRENCIES } from '@/constants/currencies';
 import { usePaymentStore } from '@/store/usePaymentStore';
-
-const MAX_AMOUNT = 50000;
-
-function parseAmount(masked: string): number {
-  const raw = masked.replace(/[^\d,.]/, '').replace(',', '.');
-  const num = parseFloat(raw);
-  return isNaN(num) ? 0 : num;
-}
+import { MAX_AMOUNT, formatMaxError, parseAmount } from '@/utils';
 
 export default function CreatePaymentScreen() {
   const fiatKey = usePaymentStore((s) => s.draft.fiatKey);
@@ -52,20 +45,17 @@ export default function CreatePaymentScreen() {
 
   const amount = watch('amount');
   const numericAmount = parseAmount(amount);
-  const hasMaxError = numericAmount >= MAX_AMOUNT;
+  const hasMaxError = !isNaN(numericAmount) && numericAmount > MAX_AMOUNT;
 
-  const amountError =
-    errors.amount?.message ??
-    (hasMaxError ? `El monto máximo diario es de 50.000 ${currency.symbol}` : undefined);
+  const amountError = errors.amount?.message ?? (hasMaxError ? formatMaxError(fiatKey) : undefined);
 
   const isContinueEnabled =
     amount.trim().length > 0 && !hasMaxError && !errors.amount && !errors.concept && !isLoading;
 
   const onSubmit = useCallback(
     async (values: CreatePaymentFormValues) => {
-      const rawAmount = values.amount.replace(/[^\d,.]/, '').replace(',', '.');
       const identifier = await submit({
-        expected_output_amount: parseFloat(rawAmount),
+        expected_output_amount: parseAmount(values.amount),
         fiat: currency.details,
         notes: values.concept,
       });
@@ -119,9 +109,8 @@ export default function CreatePaymentScreen() {
             render={({ field: { value, onChange } }) => (
               <AmountInput
                 value={value}
-                onChange={(_raw, masked) => onChange(masked)}
-                currency={currency.details}
-                symbol={currency.symbol}
+                onChange={onChange}
+                currency={fiatKey}
                 error={amountError}
               />
             )}

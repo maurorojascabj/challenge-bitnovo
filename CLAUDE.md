@@ -37,7 +37,6 @@ npx tsc --noEmit
 | Forms | react-hook-form + zod v4 + @hookform/resolvers | — |
 | Animation | react-native-reanimated 4 + react-native-worklets | ~4.1.1 |
 | SVG | react-native-svg + react-native-svg-transformer | 15.12.1 |
-| Mask input | react-native-mask-input | ^1.2.3 |
 | QR | react-native-qrcode-svg | ^6.3.21 |
 | Sharing | expo-sharing, expo-linking, expo-clipboard, expo-haptics | — |
 | Fonts | @expo-google-fonts/mulish | — |
@@ -148,6 +147,7 @@ Defined in `tsconfig.json` (`compilerOptions.paths`):
 | `@/theme/*` | `./src/theme/*` |
 | `@/constants/*` | `./src/constants/*` |
 | `@/hooks/*` | `./src/hooks/*` |
+| `@/utils` | `./src/utils/index` |
 | `@/utils/*` | `./src/utils/*` |
 | `@/types/*` | `./src/types/*` |
 | `@/assets/*` | `./assets/*` |
@@ -276,16 +276,23 @@ Pass the CTA as `stickyFooter` to `ScreenContainer`:
 
 ### Add screen-level amount validation (min/max)
 
-The schema handles format (`> 0`). Screen-level checks handle business rules with dynamic copy:
+The schema handles format (`> 0`). Screen-level checks handle business rules with dynamic copy.
+Import from `@/utils` — single source of truth for the threshold, parser, and error message:
 
 ```ts
-const numericAmount = parseAmount(amount); // strip mask, parseFloat
-const hasMaxError = numericAmount >= 50000;
-const amountError = errors.amount?.message
-  ?? (hasMaxError ? `El monto máximo diario es de 50.000 ${currency.symbol}` : undefined);
+import { MAX_AMOUNT, parseAmount, formatMaxError } from '@/utils';
+
+const numericAmount = parseAmount(amount); // currency-agnostic, returns NaN for empty
+const hasMaxError = !isNaN(numericAmount) && numericAmount > MAX_AMOUNT; // > 30000
+const amountError = errors.amount?.message ?? (hasMaxError ? formatMaxError(fiatKey) : undefined);
+// formatMaxError('eur') → "El monto máximo diario es de 30.000,00 €"
 const isContinueEnabled = amount.trim().length > 0
   && !hasMaxError && !errors.amount && !errors.concept && !isLoading;
 ```
+
+`formatAmount(raw, fiatKey)` formats a raw canonical string for display (blurred) or read-only screens.
+`sanitizeInput(text, fiatKey)` sanitizes `onChangeText` input: locale decimal sep, single sep, 6-int/2-dec cap.
+All utilities live in `src/utils/amount.ts` and are re-exported from `src/utils/index.ts`.
 
 ### Add a full-screen selector route
 
@@ -366,7 +373,6 @@ Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers bot
 - Bitnovo Pay TESTNET API: `https://payments.pre-bnvo.com/api/v1`
 - Bitnovo Pay TESTNET WS: `wss://payments.pre-bnvo.com/ws/merchant/{identifier}/`
 - Reanimated 4 worklets: https://docs.swmansion.com/react-native-reanimated/
-- react-native-mask-input: https://github.com/CaioQuirinoMedeiros/react-native-mask-input
 
 ---
 
@@ -384,10 +390,13 @@ Run before every PR / after any significant change:
 - [ ] "Selecciona una divisa" title renders on one line with back arrow visible below the notch
 - [ ] Searching a non-existent term shows "No se encontraron divisas" inline (no crash, no empty blank)
 - [ ] Selected currency in the list shows a ✓ indicator
-- [ ] Amount placeholder renders in brand blue (`#035AC5`) at ~40pt, cursor visible on Android
+- [ ] Amount placeholder (`0,00` EUR / `0.00` USD·GBP) renders in brand blue (`#035AC5`) at ~40pt; symbol always visible beside the input
+- [ ] Typing in amount field: raw value shown while focused, formatted with thousand separators on blur (e.g. `1250,5` → blur → `1.250,50`)
+- [ ] AmountInput cursor visible on Android
 - [ ] Empty `Continuar` button has background `#EAF3FF` and text `#71B0FD` (no shadow)
 - [ ] Entering amount ≤ 0 shows "El importe es obligatorio" / validation error, button disabled
-- [ ] Entering amount ≥ 50 000 shows "El monto máximo diario es de 50.000 €" (symbol updates when currency changes)
+- [ ] Entering amount > 30 000 shows "El monto máximo diario es de 30.000,00 €" (locale-formatted per currency; updates when currency changes)
+- [ ] Entering exactly 30 000 — button enabled (strictly greater than check)
 - [ ] Entering a valid amount > 0 and concept ≤ 140 chars enables the "Continuar" button (full brand blue, flat)
 - [ ] Typing 141+ chars in Concepto turns counter red, shows error, disables Continuar; trimming re-enables it
 - [ ] Tapping Concepto field with keyboard open — Continuar button rises above keyboard and stays fully visible

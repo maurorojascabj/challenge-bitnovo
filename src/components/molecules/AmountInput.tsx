@@ -1,66 +1,16 @@
-import React, { memo, useRef } from 'react';
-import {
-  TextInput,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import MaskInput, { Mask } from 'react-native-mask-input';
-import { theme } from '@/theme';
+import React, { memo, useRef, useState } from 'react';
+import { StyleSheet, TextInput, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
+
 import { Typography } from '@/components/atoms/Typography';
-import { FiatCurrency } from '@/constants/currencies';
+import { FIAT_CURRENCIES, FiatKey } from '@/constants/currencies';
+import { theme } from '@/theme';
+import { formatAmount, sanitizeInput } from '@/utils';
 
 interface AmountInputProps {
   value: string;
-  onChange: (raw: string, masked: string) => void;
-  currency: FiatCurrency;
-  symbol: string;
+  onChange: (raw: string) => void;
+  currency: FiatKey;
   error?: string;
-}
-
-// Custom masks per currency using react-native-mask-input Mask arrays
-// Each element is a string (literal) or RegExp (editable digit)
-const digitMask = /\d/;
-
-function buildEurMask(value: string): Mask {
-  // Format: 0,00 €  → we build a simple decimal mask
-  // react-native-mask-input Mask = Array<string | RegExp>
-  const digits = value.replace(/\D/g, '');
-  const len = Math.max(digits.length, 1);
-  const intDigits = Math.max(len - 2, 1);
-  const mask: Mask = [];
-  for (let i = 0; i < intDigits; i++) mask.push(digitMask);
-  mask.push(',');
-  mask.push(digitMask);
-  mask.push(digitMask);
-  mask.push(' €');
-  return mask;
-}
-
-function buildUsdMask(value: string): Mask {
-  const digits = value.replace(/\D/g, '');
-  const len = Math.max(digits.length, 1);
-  const intDigits = Math.max(len - 2, 1);
-  const mask: Mask = ['$ '];
-  for (let i = 0; i < intDigits; i++) mask.push(digitMask);
-  mask.push('.');
-  mask.push(digitMask);
-  mask.push(digitMask);
-  return mask;
-}
-
-function buildGbpMask(value: string): Mask {
-  const digits = value.replace(/\D/g, '');
-  const len = Math.max(digits.length, 1);
-  const intDigits = Math.max(len - 2, 1);
-  const mask: Mask = ['£ '];
-  for (let i = 0; i < intDigits; i++) mask.push(digitMask);
-  mask.push('.');
-  mask.push(digitMask);
-  mask.push(digitMask);
-  return mask;
 }
 
 export const AmountInput = memo(function AmountInput({
@@ -70,62 +20,94 @@ export const AmountInput = memo(function AmountInput({
   error,
 }: AmountInputProps) {
   const inputRef = useRef<TextInput>(null);
+  const [focused, setFocused] = useState(false);
 
-  const getMask = (): Mask => {
-    switch (currency) {
-      case 'EUR':
-        return buildEurMask(value);
-      case 'USD':
-        return buildUsdMask(value);
-      case 'GBP':
-        return buildGbpMask(value);
-    }
-  };
+  const { symbol, symbolPosition, locale } = FIAT_CURRENCIES[currency];
+  const placeholder = locale === 'es-ES' ? '0,00' : '0.00';
+  const displayValue = focused ? value : formatAmount(value, currency);
 
-  const placeholder = currency === 'EUR' ? '0,00 €' : currency === 'USD' ? '$ 0.00' : '£ 0.00';
+  const valueColor = error ? theme.colors.danger[500] : theme.colors.primary[500];
+  const symbolColor = error
+    ? theme.colors.danger[500]
+    : value
+      ? theme.colors.primary[500]
+      : theme.colors.placeholderAmount;
 
   return (
     <TouchableOpacity
       activeOpacity={1}
       onPress={() => inputRef.current?.focus()}
-      style={styles.container}
+      style={styles.wrapper}
     >
-      <MaskInput
-        ref={inputRef}
-        value={value}
-        onChangeText={(masked, raw) => onChange(raw ?? '', masked)}
-        mask={getMask()}
-        keyboardType="decimal-pad"
-        style={styles.input}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.neutral[300]}
-        textAlign="center"
-        selectionColor={theme.colors.primary[500]}
-        cursorColor={theme.colors.primary[500]}
-        autoFocus
-      />
-      {error ? (
-        <Typography variant="caption" color={theme.colors.danger[500]} align="center">
+      <View style={[styles.row, !!error && styles.rowError]}>
+        {symbolPosition === 'left' && (
+          <Typography variant="h1" color={symbolColor}>
+            {symbol}
+          </Typography>
+        )}
+
+        <TextInput
+          ref={inputRef}
+          value={displayValue}
+          onChangeText={(t) => onChange(sanitizeInput(t, currency))}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          keyboardType="decimal-pad"
+          placeholder={placeholder}
+          placeholderTextColor={theme.colors.placeholderAmount}
+          style={[styles.input, { color: valueColor }]}
+          selectionColor={theme.colors.primary[500]}
+          autoFocus
+        />
+
+        {symbolPosition === 'right' && (
+          <Typography variant="h1" color={symbolColor}>
+            {symbol}
+          </Typography>
+        )}
+      </View>
+
+      {!!error && (
+        <Typography variant="small" color={theme.colors.danger[500]} style={styles.errorText}>
           {error}
         </Typography>
-      ) : null}
+      )}
     </TouchableOpacity>
   );
 });
 
-const styles = StyleSheet.create<{ container: ViewStyle; input: TextStyle }>({
-  container: {
+const styles = StyleSheet.create<{
+  wrapper: ViewStyle;
+  row: ViewStyle;
+  rowError: ViewStyle;
+  input: TextStyle;
+  errorText: TextStyle;
+}>({
+  wrapper: {
     width: '100%',
     alignItems: 'center',
+    gap: theme.spacing.sm,
     paddingVertical: theme.spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: theme.colors.primary[500],
+    paddingBottom: theme.spacing.xs,
+  },
+  rowError: {
+    borderBottomColor: theme.colors.danger[500],
   },
   input: {
     fontSize: 40,
-    fontWeight: '700',
     fontFamily: theme.fontFamilies.bold,
-    color: theme.colors.primary[500],
+    minWidth: 60,
+    padding: 0,
     textAlign: 'center',
-    minWidth: 120,
-    ...(Platform.OS === 'ios' ? { lineHeight: 48 } : { includeFontPadding: false }),
+  },
+  errorText: {
+    textAlign: 'center',
   },
 });

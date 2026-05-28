@@ -10,7 +10,8 @@ import { ShareRow } from '@/components/molecules/ShareRow';
 import { WhatsAppShareRow } from '@/components/molecules/WhatsAppShareRow';
 import { Toast } from '@/components/organisms/Toast';
 import { ScreenContainer } from '@/components/templates/ScreenContainer';
-import { getCurrencyByCode } from '@/constants/currencies';
+import { FiatKey, getCurrencyByCode } from '@/constants/currencies';
+import { formatAmount } from '@/utils';
 import { usePaymentStatus } from '@/features/payments/hooks/usePaymentStatus';
 import { useShareLinks } from '@/features/payments/hooks/useShareLinks';
 import { useCountrySelectionStore } from '@/store/useCountrySelectionStore';
@@ -44,11 +45,10 @@ export default function SharePaymentScreen() {
   const currency = order?.fiat ? getCurrencyByCode(order.fiat) : undefined;
   const symbol = currency?.symbol ?? order?.fiat ?? '';
 
-  // Format amount with 2 decimals; use comma separator for EUR/GBP, dot for USD
   const amountLabel = (() => {
     if (order == null || order.fiat_amount == null) return '';
-    const fixed = order.fiat_amount.toFixed(2);
-    return order.fiat === 'USD' ? fixed : fixed.replace('.', ',');
+    const fiatKey = (order.fiat?.toLowerCase() ?? 'eur') as FiatKey;
+    return formatAmount(String(order.fiat_amount), fiatKey);
   })();
 
   const showToast = useCallback(
