@@ -14,6 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
   },
   android: {
+    package: 'com.maurorojas.challengebitnovo',
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
@@ -51,5 +52,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
     wsUrl: process.env.EXPO_PUBLIC_WS_URL,
     deviceId: process.env.EXPO_PUBLIC_DEVICE_ID,
+    eas: {
+      projectId: '0a79550b-b8f3-459c-8b82-dbb70cffcfee',
+    },
   },
+  owner: 'maurorojas',
 });
