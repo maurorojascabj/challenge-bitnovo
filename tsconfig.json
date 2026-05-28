@@ -3,9 +3,19 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@/components/*": ["./src/components/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/store/*": ["./src/store/*"],
+      "@/theme": ["./src/theme/index"],
+      "@/theme/*": ["./src/theme/*"],
+      "@/constants/*": ["./src/constants/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/utils": ["./src/utils/index"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/assets/*": ["./assets/*"]
     }
   },
   "include": [
