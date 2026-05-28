@@ -48,6 +48,7 @@ export const colors = {
   buttonDisabledBg: '#EAF3FF',
   buttonDisabledText: '#71B0FD',
   placeholderAmount: '#C0CCDA',
+  backgroundCardPay: '#D3DCE6',
 } as const;
 
 export type Colors = typeof colors;

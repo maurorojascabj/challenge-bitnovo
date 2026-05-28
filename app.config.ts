@@ -21,6 +21,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
+    // Required for useAnimatedKeyboard() — in 'pan' mode the OS does not
+    // resize the window; the keyboard height is tracked as an inset by
+    // Reanimated and applied as animated paddingBottom. Do NOT change to
+    // 'resize' or the footer will be double-padded.
+    softwareKeyboardLayoutMode: 'pan',
   },
   web: {
     output: 'static',

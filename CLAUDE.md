@@ -355,7 +355,7 @@ Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers bot
 
 14. **Do not duplicate store state inside RHF.** The `fiat` field was previously in both the schema and `usePaymentStore`, causing silent desync. If a value is managed by a Zustand slice, read it from the store at submit time — keep it out of the form schema entirely.
 
-15. **`KeyboardAvoidingView` is unreliable when nested below a `HeaderBar` sibling.** When the KAV is not the root-level view, iOS cannot correctly measure its position in the window, so the padding it injects undershoots the keyboard overlap. For screens with `stickyFooter`, `ScreenContainer` bypasses KAV entirely: it uses `Keyboard.addListener('keyboardWillShow')` to capture the keyboard height and applies it as `paddingBottom` on a plain `View`. When the keyboard closes, `paddingBottom` reverts to `insets.bottom` (home indicator clearance). Never add a `KeyboardAvoidingView` around a screen that already uses `ScreenContainer` with `stickyFooter`.
+15. **`ScreenContainer` uses `useAnimatedKeyboard()` for keyboard handling — do NOT add `KeyboardAvoidingView` or `Keyboard.addListener`.** The hook (from `react-native-reanimated`) updates the footer's `paddingBottom` on the UI thread every frame, in sync with the native keyboard animation, on both iOS and Android. The outer container is an `Animated.View` driven by `useAnimatedStyle`. The closed-keyboard padding is `Math.max(keyboard.height.value, insets.bottom)` — this covers home-indicator clearance (gesture nav) and 3-button-nav without hardcoded values. Scrollable content uses `keyboardDismissMode="on-drag"` and a `Pressable` wrapper for tap-outside-to-dismiss. `softwareKeyboardLayoutMode: 'pan'` in `app.config.ts` is mandatory (see gotcha 21).
 
 16. **Mulish fonts must finish loading before the first render.** `_layout.tsx` calls `useFonts({ Mulish_400Regular, Mulish_600SemiBold, Mulish_700Bold })` and returns `null` (keeping the splash screen) until `fontsLoaded || fontError`. If you add a new Mulish weight, import it from `@expo-google-fonts/mulish` and add it to the `useFonts` map — omitting it causes a yellow "fontFamily not found" warning and falls back to the system font for that weight.
 
@@ -365,7 +365,9 @@ Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers bot
 
 19. **`QRCard` logo overlay requires `ecl="H"`.** The Bitnovo logo is rendered via an absolutely-positioned `View` on top of the `QRCode` component (SVGs cannot be passed as the `logo` prop of `react-native-qrcode-svg`). Error-correction level must be `"H"` (30% recovery) so the QR remains scannable despite the logo covering the centre. Lowering `ecl` while keeping the overlay will produce unreadable QR codes. The 140-character limit is enforced by the Zod schema (`.max(140)`), which triggers `errors.concept` via RHF `mode: 'onChange'`. The `Continuar` button gates on `!errors.concept`. Do not restore `maxLength` — it would prevent the user from seeing the red counter and the validation error.
 
-20. **Android New Arch + `FormData` = network failure.** With `newArchEnabled: true`, React Native's networking layer (both XHR and `fetch` adapters) does not correctly serialize `FormData._parts` into a multipart body on Android, producing `ERR_NETWORK` or `TypeError: Network request failed` before any HTTP response. iOS is unaffected. The root cause was confirmed by: URLSearchParams reaching the server (HTTP 500 — wrong format) while FormData never reached it. Fix: build the multipart body manually as a string with an explicit boundary in `createPayment` — see `src/features/payments/api/paymentsApi.ts`. Do not revert to `new FormData()` for this endpoint unless the underlying RN New Arch networking bug is resolved upstream.
+20. **`softwareKeyboardLayoutMode: 'pan'` is required in `app.config.ts` for `useAnimatedKeyboard()` to work correctly on Android with `edgeToEdgeEnabled: true`.** In `resize` mode (the default), the OS already shrinks the app window when the keyboard opens — applying `useAnimatedKeyboard`'s padding on top of that double-pads the layout and pushes content too high. In `pan` mode the window stays full-height and the keyboard height is tracked purely as an inset by Reanimated. Do NOT change this value without retesting the sticky-footer layout on Android (both gesture-nav and 3-button-nav).
+
+21. **Android New Arch + `FormData` = network failure.** With `newArchEnabled: true`, React Native's networking layer (both XHR and `fetch` adapters) does not correctly serialize `FormData._parts` into a multipart body on Android, producing `ERR_NETWORK` or `TypeError: Network request failed` before any HTTP response. iOS is unaffected. The root cause was confirmed by: URLSearchParams reaching the server (HTTP 500 — wrong format) while FormData never reached it. Fix: build the multipart body manually as a string with an explicit boundary in `createPayment` — see `src/features/payments/api/paymentsApi.ts`. Do not revert to `new FormData()` for this endpoint unless the underlying RN New Arch networking bug is resolved upstream.
 
 ---
 
@@ -403,7 +405,11 @@ Run before every PR / after any significant change:
 - [ ] Entering exactly 30 000 — button enabled (strictly greater than check)
 - [ ] Entering a valid amount > 0 and concept ≤ 140 chars enables the "Continuar" button (full brand blue, flat)
 - [ ] Typing 141+ chars in Concepto turns counter red, shows error, disables Continuar; trimming re-enables it
-- [ ] Tapping Concepto field with keyboard open — Continuar button rises above keyboard and stays fully visible
+- [ ] Tapping Importe or Concepto field on iOS — Continuar button rises smoothly above the keyboard with no jump; stays fully visible
+- [ ] Tapping Importe or Concepto field on Android (emulator + device, gesture-nav and 3-button-nav) — same smooth rise, no jump, CTA fully visible above keyboard
+- [ ] Switching focus AmountInput → ConceptInput on Android — keyboard height changes smoothly with no layout flicker
+- [ ] Dragging the scroll content while keyboard is open — keyboard dismisses (on-drag)
+- [ ] Tapping empty space around the form while keyboard is open — keyboard dismisses
 - [ ] Dismissing keyboard — Continuar button drops back above home indicator with no overlap
 - [ ] Tapping "Continuar" → SharePayment screen with correct amount displayed
 - [ ] Back arrow navigates correctly from all screens; no crash on empty stack

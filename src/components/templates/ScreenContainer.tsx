@@ -1,13 +1,6 @@
-import React, { memo, useEffect, useState } from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-  ViewStyle,
-} from 'react-native';
+import React, { memo } from 'react';
+import { Keyboard, Pressable, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { Edge, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 
@@ -31,98 +24,96 @@ export const ScreenContainer = memo(function ScreenContainer({
   edges = ['bottom'],
 }: ScreenContainerProps) {
   const insets = useSafeAreaInsets();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const hasStickyFooter = stickyFooter != null;
 
-  // KeyboardAvoidingView is unreliable when nested below a HeaderBar because it
-  // cannot measure its own position correctly. For the stickyFooter case we track
-  // keyboard height manually and apply it as paddingBottom so the footer always
-  // sits above the keyboard.
-  useEffect(() => {
-    if (!hasStickyFooter) return;
+  // useAnimatedKeyboard() tracks keyboard height on the UI thread, frame by
+  // frame, in sync with the native animation. This avoids the "jump" caused
+  // by keyboardDidShow (which fires only after the animation ends on Android).
+  // Requires softwareKeyboardLayoutMode: 'pan' in app.config.ts — see CLAUDE.md
+  // gotcha 21. Works identically on iOS and Android.
+  const keyboard = useAnimatedKeyboard();
 
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [hasStickyFooter]);
+  // When the keyboard is closed, keep at least the safe-area bottom inset
+  // (home indicator / nav bar clearance). When it is open, lift by the exact
+  // keyboard height reported by the native layer.
+  const animatedFooterStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(keyboard.height.value, insets.bottom),
+  }));
 
   const content = scrollable ? (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[styles.scrollContent, padded && styles.padded]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}
     >
-      {children}
+      <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.pressableFill}>
+        {children}
+      </Pressable>
     </ScrollView>
   ) : (
     <View style={[styles.inner, padded && styles.padded, style]}>{children}</View>
   );
 
-  // Sticky-footer path: plain View + Keyboard listener
+  // Sticky-footer path: Animated.View + useAnimatedKeyboard for smooth,
+  // frame-synchronised lift on both iOS and Android.
   if (hasStickyFooter) {
-    // When keyboard is open: push content up by keyboard height.
-    // When keyboard is closed: cushion the home indicator with the safe area inset.
-    const bottomPad = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
-    // Apply top inset when the screen has no HeaderBar (e.g. share screen passes edges=['top','bottom'])
     const topPad = edges.includes('top') ? insets.top : 0;
     return (
-      <View
-        style={[styles.safe, { backgroundColor, paddingTop: topPad, paddingBottom: bottomPad }]}
+      <Animated.View
+        style={[styles.safe, { backgroundColor, paddingTop: topPad }, animatedFooterStyle]}
       >
         {content}
         <View style={[styles.footer, padded && styles.padded]}>{stickyFooter}</View>
-      </View>
+      </Animated.View>
     );
   }
 
-  // Default path: SafeAreaView + KeyboardAvoidingView (no sticky footer)
+  // Default path (no sticky footer): SafeAreaView + Animated.View.
+  // KeyboardAvoidingView removed — same useAnimatedKeyboard strategy applies.
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor }]} edges={edges}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoiding}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        // 56 matches HeaderBar.styles.row.minHeight
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
-      >
+      <Animated.View style={[styles.keyboardAvoiding, animatedFooterStyle]}>
         {content}
-      </KeyboardAvoidingView>
+      </Animated.View>
     </SafeAreaView>
   );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<{
+  safe: ViewStyle;
+  keyboardAvoiding: ViewStyle;
+  inner: ViewStyle;
+  padded: ViewStyle;
+  scroll: ViewStyle;
+  scrollContent: ViewStyle;
+  footer: ViewStyle;
+  pressableFill: ViewStyle;
+}>({
   safe: {
     flex: 1,
-  } as ViewStyle,
+  },
   keyboardAvoiding: {
     flex: 1,
-  } as ViewStyle,
+  },
   inner: {
     flex: 1,
-  } as ViewStyle,
+  },
   padded: {
     paddingHorizontal: theme.spacing.xl,
-  } as ViewStyle,
+  },
   scroll: {
     flex: 1,
-  } as ViewStyle,
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: theme.spacing.xxl,
-  } as ViewStyle,
+    paddingBottom: theme.spacing.huge,
+  },
   footer: {
     paddingTop: theme.spacing.md,
-  } as ViewStyle,
+  },
+  pressableFill: {
+    flex: 1,
+  },
 });

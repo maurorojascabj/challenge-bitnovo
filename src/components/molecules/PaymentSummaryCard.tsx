@@ -1,8 +1,8 @@
+import PayIcon from '@/assets/svg/pay.svg';
+import { Typography } from '@/components/atoms/Typography';
+import { theme } from '@/theme';
 import React, { memo } from 'react';
 import { StyleSheet, TextStyle, View, ViewStyle } from 'react-native';
-import { theme } from '@/theme';
-import { Typography } from '@/components/atoms/Typography';
-import PayIcon from '@/assets/svg/pay.svg';
 
 interface PaymentSummaryCardProps {
   amount: string;
@@ -20,7 +20,7 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
       <View style={styles.topRow}>
         <PayIcon width={64} height={64} />
         <View style={styles.amountCol}>
-          <Typography variant="caption" color={theme.colors.textSecondary}>
+          <Typography variant="body" color={theme.colors.textSecondary}>
             Solicitud de pago
           </Typography>
           <Typography variant="h1" color={theme.colors.textPrimary}>
@@ -47,7 +47,7 @@ const styles = StyleSheet.create<{
   subtitle: TextStyle;
 }>({
   card: {
-    backgroundColor: theme.colors.neutral[100],
+    backgroundColor: theme.colors.backgroundCardPay,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.xl,
   },
