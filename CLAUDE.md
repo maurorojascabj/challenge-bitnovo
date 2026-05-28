@@ -67,7 +67,7 @@ app/                         # expo-router file-based routes
   index.tsx                  # CreatePayment screen (RHF form, amount/max validation, stickyFooter)
   share/[id].tsx             # SharePayment screen — headerless, PaymentSummaryCard + vertical ShareRows + inline WhatsApp form; WS subscription
   qr/[id].tsx                # QR screen — blue background, info banner, QRCard with Bitnovo logo overlay; WS subscription
-  success.tsx                # PaymentSuccess screen (tick-circle.svg)
+  success.tsx                # PaymentSuccess screen — tick-circle-green.svg, "Pago recibido" title, "El pago se ha confirmado con éxito" subtitle, ghost "Finalizar" button (no amount displayed)
   selectors/
     fiat.tsx                 # Full-screen fiat selector (slide_from_right push, not modal)
     country.tsx              # Full-screen country selector (slide_from_right push, mirrors fiat selector)
@@ -393,6 +393,8 @@ Run before every PR / after any significant change:
 - [ ] Amount placeholder (`0,00` EUR / `0.00` USD·GBP) renders in brand blue (`#035AC5`) at ~40pt; symbol always visible beside the input
 - [ ] Typing in amount field: raw value shown while focused, formatted with thousand separators on blur (e.g. `1250,5` → blur → `1.250,50`)
 - [ ] AmountInput cursor visible on Android
+- [ ] AmountInput borderBottom is primary[500] by default; switches to danger[500] on error
+- [ ] AmountInput: on error the typed value text and the currency symbol both turn danger[500]; on no-error they are primary[500]; empty symbol matches placeholder color
 - [ ] Empty `Continuar` button has background `#EAF3FF` and text `#71B0FD` (no shadow)
 - [ ] Entering amount ≤ 0 shows "El importe es obligatorio" / validation error, button disabled
 - [ ] Entering amount > 30 000 shows "El monto máximo diario es de 30.000,00 €" (locale-formatted per currency; updates when currency changes)
@@ -414,7 +416,7 @@ Run before every PR / after any significant change:
 - [ ] QR screen: full blue (primary[500]) background below white HeaderBar
 - [ ] QR screen: info banner with info-circle.svg icon; Bitnovo-logo.svg centred in QR; amount in white; subtitle in primary[200]
 - [ ] QR code is scannable despite logo overlay (ecl=H)
-- [ ] Success screen shows tick-circle.svg (120×120) instead of AnimatedSuccess
+- [ ] Success screen shows tick-circle-green.svg (120×120), title "Pago recibido", subtitle "El pago se ha confirmado con éxito", ghost "Finalizar" button at bottom (no amount shown)
 - [ ] Simulating a completed WS event navigates to PaymentSuccess
 - [ ] "Nueva Solicitud" resets draft and returns to `/` with title "Crear pago"
 - [ ] Offline mode shows error Toast (not a crash)
