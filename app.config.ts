@@ -41,6 +41,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#035AC5',
+        // Makes the Android 12+ squircle container match the splash background
+        // so the icon appears floating on solid blue instead of white squircle.
+        imageBackgroundColor: '#035AC5',
       },
     ],
   ],
