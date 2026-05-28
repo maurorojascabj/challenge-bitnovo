@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
@@ -14,6 +15,11 @@ import { theme } from '@/theme';
 
 // Keep the splash screen visible while we load fonts / assets
 SplashScreen.preventAutoHideAsync();
+
+// Paint the JS root view with the app background colour before the first
+// React frame renders — prevents the white flash between splash fade-out
+// and CreatePayment appearing.
+SystemUI.setBackgroundColorAsync(theme.colors.background);
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

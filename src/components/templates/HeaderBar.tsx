@@ -1,11 +1,11 @@
-import React, { memo, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '@/theme';
-import { Typography } from '@/components/atoms/Typography';
 import BitnovoLogo from '@/assets/svg/Bitnovo-logo.svg';
 import ArrowLeftIcon from '@/assets/svg/arrow-left.svg';
+import { Typography } from '@/components/atoms/Typography';
+import { theme } from '@/theme';
+import { useRouter } from 'expo-router';
+import React, { memo, useCallback } from 'react';
+import { StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface HeaderBarProps {
   title?: string;
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 96,
+    paddingHorizontal: 90,
   } as ViewStyle,
   sideLeft: {
     zIndex: 1,
