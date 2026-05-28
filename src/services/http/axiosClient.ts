@@ -16,7 +16,9 @@ axiosClient.interceptors.request.use((req) => {
   // Always inject the Device ID
   req.headers['X-Device-Id'] = config.deviceId;
 
-  // If the body is FormData, let axios set the Content-Type boundary automatically
+  // If the body is a native FormData object, let the XHR layer set the
+  // Content-Type boundary automatically (unused since createPayment builds
+  // the multipart body as a string — kept as a safeguard for future endpoints)
   if (req.data instanceof FormData) {
     delete req.headers['Content-Type'];
   }

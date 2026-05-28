@@ -8,14 +8,24 @@ const ORDERS_PATH = '/orders/';
  * Uses multipart/form-data as required by the Bitnovo API.
  */
 export async function createPayment(input: CreatePaymentRequest): Promise<Order> {
-  const form = new FormData();
-  form.append('expected_output_amount', String(input.expected_output_amount));
-  form.append('fiat', input.fiat);
-  if (input.notes) {
-    form.append('notes', input.notes);
-  }
+  const boundary = '----WebKitFormBoundary' + Math.random().toString(16).slice(2);
+  const CRLF = '\r\n';
+  const fields: [string, string][] = [
+    ['expected_output_amount', String(input.expected_output_amount)],
+    ['fiat', input.fiat],
+    ...(input.notes ? [['notes', input.notes] as [string, string]] : []),
+  ];
+  const body =
+    fields
+      .map(
+        ([name, value]) =>
+          `--${boundary}${CRLF}Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}${value}`
+      )
+      .join(CRLF) + `${CRLF}--${boundary}--${CRLF}`;
 
-  const { data } = await axiosClient.post<Order>(ORDERS_PATH, form);
+  const { data } = await axiosClient.post<Order>(ORDERS_PATH, body, {
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+  });
   return data;
 }
 
