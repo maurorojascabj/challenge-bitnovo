@@ -9,17 +9,18 @@ Before writing any code, read the exact versioned docs: https://docs.expo.dev/ve
 ## Quick start
 
 ```bash
-npm install
-npm run ios       # iOS Simulator
-npm run android   # Android emulator
-npm run web       # Expo web
+corepack enable   # one-time per machine — activates pnpm via packageManager field
+pnpm install
+pnpm ios          # iOS Simulator
+pnpm android      # Android emulator
+pnpm web          # Expo web
 ```
 
 Checks (must all pass before committing):
 
 ```bash
-npm run lint
-npm run format:check
+pnpm lint
+pnpm format:check
 npx tsc --noEmit
 ```
 
@@ -290,7 +291,8 @@ const isContinueEnabled = amount.trim().length > 0
   && !hasMaxError && !errors.amount && !errors.concept && !isLoading;
 ```
 
-`formatAmount(raw, fiatKey)` formats a raw canonical string for display (blurred) or read-only screens.
+`formatAmountWithSymbol(raw, fiatKey)` formats a raw amount and places the currency symbol on the correct side. **This is the single source of truth for displaying amounts with their symbol** — use it on all read-only screens (Share, QR). EUR → `"1.250,50 €"`, USD → `"$ 1,250.50"`, GBP → `"£ 1,250.50"`.
+`formatAmount(raw, fiatKey)` formats only the number without the symbol (used internally by `formatAmountWithSymbol` and the blurred-input display).
 `sanitizeInput(text, fiatKey)` sanitizes `onChangeText` input: locale decimal sep, single sep, 6-int/2-dec cap.
 All utilities live in `src/utils/amount.ts` and are re-exported from `src/utils/index.ts`.
 
@@ -367,7 +369,11 @@ Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers bot
 
 20. **`softwareKeyboardLayoutMode: 'pan'` is required in `app.config.ts` for `useAnimatedKeyboard()` to work correctly on Android with `edgeToEdgeEnabled: true`.** In `resize` mode (the default), the OS already shrinks the app window when the keyboard opens — applying `useAnimatedKeyboard`'s padding on top of that double-pads the layout and pushes content too high. In `pan` mode the window stays full-height and the keyboard height is tracked purely as an inset by Reanimated. Do NOT change this value without retesting the sticky-footer layout on Android (both gesture-nav and 3-button-nav).
 
-21. **Android New Arch + `FormData` = network failure.** With `newArchEnabled: true`, React Native's networking layer (both XHR and `fetch` adapters) does not correctly serialize `FormData._parts` into a multipart body on Android, producing `ERR_NETWORK` or `TypeError: Network request failed` before any HTTP response. iOS is unaffected. The root cause was confirmed by: URLSearchParams reaching the server (HTTP 500 — wrong format) while FormData never reached it. Fix: build the multipart body manually as a string with an explicit boundary in `createPayment` — see `src/features/payments/api/paymentsApi.ts`. Do not revert to `new FormData()` for this endpoint unless the underlying RN New Arch networking bug is resolved upstream.
+21. **Package manager is pnpm — run `corepack enable` once per machine.** The `packageManager` field in `package.json` pins `pnpm@9.15.0`. Corepack (bundled with Node 20+) enforces this automatically. If you don't have Corepack, run `npm install -g pnpm@9.15.0` as a fallback. `.npmrc` sets `node-linker=hoisted` so Metro and Expo plugins can resolve peer deps via the flat `node_modules` tree (strict pnpm mode breaks Metro resolution for several RN/Expo packages). Do NOT remove `node-linker=hoisted` without retesting on both iOS and Android.
+
+22. **`expo-blur` BlurView on Android 11 and below shows a semi-opaque fallback.** On Android 12+ (API 31+), `BlurView` uses `RenderEffect` for GPU-accelerated blur. On Android 11 and below, `expo-blur` falls back to a translucent overlay automatically — the blur effect is absent but the modal is still usable. The project `minSdkVersion` is API 24 (Expo SDK 54 default); the fallback is accepted. A color tint (`rgba(30,214,235,0.10)`) is applied via an absolutely-positioned `View` on top of `BlurView` for visual consistency.
+
+23. **Android New Arch + `FormData` = network failure.** With `newArchEnabled: true`, React Native's networking layer (both XHR and `fetch` adapters) does not correctly serialize `FormData._parts` into a multipart body on Android, producing `ERR_NETWORK` or `TypeError: Network request failed` before any HTTP response. iOS is unaffected. The root cause was confirmed by: URLSearchParams reaching the server (HTTP 500 — wrong format) while FormData never reached it. Fix: build the multipart body manually as a string with an explicit boundary in `createPayment` — see `src/features/payments/api/paymentsApi.ts`. Do not revert to `new FormData()` for this endpoint unless the underlying RN New Arch networking bug is resolved upstream.
 
 ---
 
