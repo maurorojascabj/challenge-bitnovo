@@ -51,9 +51,9 @@ npx tsc --noEmit
 | Styles | StyleSheet + typed `theme` module | Strong typing, zero build-config surface, Reanimated 4 worklet-safe, perf |
 | State | Zustand v5 (slice-per-concern) | Selector subscriptions, zero boilerplate, no Provider tree |
 | Fiat picker | Full-screen route (`selectors/fiat`) | No `<Modal>-inside-route` friction; uses `router.canGoBack()` guard; reuses `HeaderBar` + `ScreenContainer` |
-| Country picker | `SelectorModal` bottom-sheet | WhatsApp-only flow; SVG flags already in project; modal presentation suits one-off selection |
+| Country picker | Full-screen route (`selectors/country`) | Mirrors fiat selector — `HeaderBar` + `ScreenContainer` + search + `FlatList` + ✓; navigated via `router.push`; writes to `useCountrySelectionStore` then `router.back()` |
 | Device ID | Centralized `X-Device-Id` header | Single source in axios interceptor + WS URL, sourced from `EXPO_PUBLIC_DEVICE_ID` |
-| Safe area | `SafeAreaProvider` at root + `edges` per layer | Provider in `_layout.tsx`; `HeaderBar` uses `edges={['top']}`, `ScreenContainer` uses `edges={['bottom']}` for standard screens — no double-wrapping. Screens with `stickyFooter` use a plain `View` + `Keyboard` listener instead (see gotcha 15). |
+| Safe area | `SafeAreaProvider` at root + `edges` per layer | Provider in `_layout.tsx`; `HeaderBar` uses `edges={['top']}`, `ScreenContainer` accepts `edges` prop (default `['bottom']`). Headerless screens pass `edges={['top','bottom']}` so the notch is handled without a `HeaderBar`. Screens with `stickyFooter` use a plain `View` + `Keyboard` listener (see gotcha 15); top inset applied via `insets.top` when `edges` includes `'top'`. |
 | Header layout | `absoluteFillObject` center + flex sides | Title spans full row width; side buttons never squeeze the center; `pointerEvents="none"` lets taps reach side elements |
 | Typography | Mulish via `@expo-google-fonts/mulish` | Loaded in `_layout.tsx` with `useFonts`; splash held until fonts ready; `fontFamily` set per variant in `theme/typography.ts`; no inline font strings anywhere |
 | Button shadow | Flat (`theme.shadows.button` is empty) | Spec requires no shadow on the primary CTA; token kept for API stability |
@@ -66,20 +66,20 @@ npx tsc --noEmit
 app/                         # expo-router file-based routes
   _layout.tsx                # Root Stack, GestureHandlerRootView, SplashScreen guard, Mulish useFonts
   index.tsx                  # CreatePayment screen (RHF form, amount/max validation, stickyFooter)
-  share/[id].tsx             # SharePayment screen (WS + 4 share options)
-  qr/[id].tsx                # QR screen (WS subscription)
-  success.tsx                # PaymentSuccess screen (AnimatedSuccess)
+  share/[id].tsx             # SharePayment screen — headerless, PaymentSummaryCard + vertical ShareRows + inline WhatsApp form; WS subscription
+  qr/[id].tsx                # QR screen — blue background, info banner, QRCard with Bitnovo logo overlay; WS subscription
+  success.tsx                # PaymentSuccess screen (tick-circle.svg)
   selectors/
     fiat.tsx                 # Full-screen fiat selector (slide_from_right push, not modal)
-    country.tsx              # Full-screen country selector (modal bottom-sheet)
+    country.tsx              # Full-screen country selector (slide_from_right push, mirrors fiat selector)
 
 src/
   components/
     atoms/                   # Single-element: Button, Typography, Loader, Divider
       index.ts               # barrel
-    molecules/               # Small compositions: AmountInput, ConceptInput, SelectorRow, ShareOption, QRCard
+    molecules/               # Small compositions: AmountInput, ConceptInput, SelectorRow, QRCard, PaymentSummaryCard, ShareRow, WhatsAppShareRow
       index.ts
-    organisms/               # Stateful multi-element: SelectorModal, WhatsAppModal, Toast, AnimatedSuccess
+    organisms/               # Stateful multi-element: SelectorModal, Toast, AnimatedSuccess
       index.ts
     templates/               # Screen scaffolds: ScreenContainer, HeaderBar
       index.ts
@@ -128,7 +128,7 @@ src/
     svg.d.ts                 # Ambient module declaration for *.svg imports
     index.ts
 assets/
-  svg/                       # All flag SVGs + Bitnovo-logo.svg + arrow-left.svg (ASCII filenames only — see gotcha 1)
+  svg/                       # All flag SVGs + Bitnovo-logo.svg + arrow-left.svg + pay.svg + tick-circle.svg + tick-circle-green.svg + info-circle.svg (ASCII filenames only — see gotcha 1)
 ```
 
 ---
@@ -210,9 +210,9 @@ fontFamily: theme.fontFamilies.regular      // 'Mulish_400Regular'
 
 | Layer | Role | Examples |
 |---|---|---|
-| atoms | Single-element, no state | `Button`, `Typography`, `Loader`, `Divider` |
-| molecules | Small composition, single purpose | `AmountInput`, `ConceptInput`, `SelectorRow`, `ShareOption`, `QRCard` |
-| organisms | Multi-element, often stateful or animated | `SelectorModal`, `WhatsAppModal`, `Toast`, `AnimatedSuccess` |
+| atoms | Single-element, no state | `Button` (supports `leftIcon` + `rightIcon`), `Typography`, `Loader`, `Divider` |
+| molecules | Small composition, single purpose | `AmountInput`, `ConceptInput`, `SelectorRow`, `QRCard`, `PaymentSummaryCard`, `ShareRow`, `WhatsAppShareRow` |
+| organisms | Multi-element, often stateful or animated | `SelectorModal`, `Toast`, `AnimatedSuccess` |
 | templates | Screen scaffold, layout only | `ScreenContainer`, `HeaderBar` |
 
 Conventions for every component:
@@ -294,6 +294,22 @@ const isContinueEnabled = amount.trim().length > 0
 3. On selection: write to the relevant store slice, then `router.back()`.
 4. Navigate to it via `router.push('/selectors/<name>')` — use a header chip or `TouchableOpacity` in `rightElement`.
 
+### Add a headerless screen (no HeaderBar)
+
+Pass `edges={['top','bottom']}` to `ScreenContainer` so the safe area covers both the notch and the home indicator without a `HeaderBar`:
+
+```tsx
+<ScreenContainer
+  scrollable
+  edges={['top', 'bottom']}
+  stickyFooter={<Button label="..." onPress={...} fullWidth />}
+>
+  {/* content starts below the notch */}
+</ScreenContainer>
+```
+
+`ScreenContainer` applies `paddingTop: insets.top` in the stickyFooter branch when `edges` includes `'top'`. No separate `SafeAreaView` wrapper needed.
+
 ### Add an SVG asset
 
 1. Drop the file in `assets/svg/` — **ASCII filename only** (see gotcha 1).
@@ -336,7 +352,11 @@ const isContinueEnabled = amount.trim().length > 0
 
 16. **Mulish fonts must finish loading before the first render.** `_layout.tsx` calls `useFonts({ Mulish_400Regular, Mulish_600SemiBold, Mulish_700Bold })` and returns `null` (keeping the splash screen) until `fontsLoaded || fontError`. If you add a new Mulish weight, import it from `@expo-google-fonts/mulish` and add it to the `useFonts` map — omitting it causes a yellow "fontFamily not found" warning and falls back to the system font for that weight.
 
-17. **`ConceptInput` has no `maxLength` hard-block.** The 140-character limit is enforced by the Zod schema (`.max(140)`), which triggers `errors.concept` via RHF `mode: 'onChange'`. The `Continuar` button gates on `!errors.concept`. Do not restore `maxLength` — it would prevent the user from seeing the red counter and the validation error.
+17. **`ConceptInput` has no `maxLength` hard-block.**
+
+18. **`createPayment` API may omit `fiat_amount` and `fiat` in the response.** The Bitnovo testnet create endpoint does not always echo these fields back. `useCreatePayment` enriches the stored order before calling `setOrder`: `fiat_amount: order.fiat_amount ?? input.expected_output_amount` and `fiat: order.fiat ?? input.fiat`. Never read `fiat_amount` from the store without this enrichment in place.
+
+19. **`QRCard` logo overlay requires `ecl="H"`.** The Bitnovo logo is rendered via an absolutely-positioned `View` on top of the `QRCode` component (SVGs cannot be passed as the `logo` prop of `react-native-qrcode-svg`). Error-correction level must be `"H"` (30% recovery) so the QR remains scannable despite the logo covering the centre. Lowering `ecl` while keeping the overlay will produce unreadable QR codes. The 140-character limit is enforced by the Zod schema (`.max(140)`), which triggers `errors.concept` via RHF `mode: 'onChange'`. The `Continuar` button gates on `!errors.concept`. Do not restore `maxLength` — it would prevent the user from seeing the red counter and the validation error.
 
 ---
 
@@ -374,8 +394,19 @@ Run before every PR / after any significant change:
 - [ ] Dismissing keyboard — Continuar button drops back above home indicator with no overlap
 - [ ] Tapping "Continuar" → SharePayment screen with correct amount displayed
 - [ ] Back arrow navigates correctly from all screens; no crash on empty stack
-- [ ] QR tab renders the QR code for the payment identifier
-- [ ] Simulating a completed WS event navigates to PaymentSuccess with animation
+- [ ] Share screen has no HeaderBar — content starts at notch with PaymentSummaryCard
+- [ ] PaymentSummaryCard shows pay.svg icon + "Solicitud de pago" + formatted amount (e.g. "56,00 €") + subtitle
+- [ ] URL row copies link and shows toast; QR button (right) pushes to `/qr/:id`
+- [ ] WhatsApp row: country chip shows `+34 ▼` by default; tapping it pushes `/selectors/country` via slide_from_right
+- [ ] Country selector: search filters by name + code, ✓ marks selected, "No se encontraron países" on empty
+- [ ] WhatsApp Enviar disabled when phone empty; after sending shows "Solicitud enviada" bottom-sheet modal
+- [ ] "Entendido" in the modal calls router.replace('/') and resets country store to default (+34)
+- [ ] "Nueva solicitud" button has WalletAddIcon on the RIGHT of the label
+- [ ] QR screen: full blue (primary[500]) background below white HeaderBar
+- [ ] QR screen: info banner with info-circle.svg icon; Bitnovo-logo.svg centred in QR; amount in white; subtitle in primary[200]
+- [ ] QR code is scannable despite logo overlay (ecl=H)
+- [ ] Success screen shows tick-circle.svg (120×120) instead of AnimatedSuccess
+- [ ] Simulating a completed WS event navigates to PaymentSuccess
 - [ ] "Nueva Solicitud" resets draft and returns to `/` with title "Crear pago"
 - [ ] Offline mode shows error Toast (not a crash)
 - [ ] No Reanimated / new-arch warnings in Metro or device logs
