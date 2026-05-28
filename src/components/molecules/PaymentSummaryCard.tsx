@@ -6,13 +6,11 @@ import { StyleSheet, TextStyle, View, ViewStyle } from 'react-native';
 
 interface PaymentSummaryCardProps {
   amount: string;
-  symbol: string;
   subtitle: string;
 }
 
 export const PaymentSummaryCard = memo(function PaymentSummaryCard({
   amount,
-  symbol,
   subtitle,
 }: PaymentSummaryCardProps) {
   return (
@@ -24,7 +22,7 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
             Solicitud de pago
           </Typography>
           <Typography variant="h1" color={theme.colors.textPrimary}>
-            {amount} {symbol}
+            {amount}
           </Typography>
         </View>
       </View>
@@ -54,11 +52,10 @@ const styles = StyleSheet.create<{
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: theme.spacing.lg,
   },
   amountCol: {
-    flex: 1,
-    alignItems: 'flex-start',
     gap: 2,
   },
   subtitle: {

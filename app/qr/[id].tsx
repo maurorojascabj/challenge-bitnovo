@@ -9,8 +9,8 @@ import { HeaderBar } from '@/components/templates/HeaderBar';
 import { ScreenContainer } from '@/components/templates/ScreenContainer';
 import { theme } from '@/theme';
 
-import { FiatKey, getCurrencyByCode } from '@/constants/currencies';
-import { formatAmount } from '@/utils';
+import { FiatKey } from '@/constants/currencies';
+import { formatAmountWithSymbol } from '@/utils';
 import { usePaymentStatus } from '@/features/payments/hooks/usePaymentStatus';
 import { useOrderStore } from '@/store/useOrderStore';
 
@@ -26,13 +26,10 @@ export default function QRPaymentScreen() {
 
   const webUrl = order?.web_url;
 
-  const currency = order?.fiat ? getCurrencyByCode(order.fiat) : undefined;
-  const symbol = currency?.symbol ?? order?.fiat ?? '';
-
   const amountLabel = (() => {
     if (order == null || order.fiat_amount == null) return '';
     const fiatKey = (order.fiat?.toLowerCase() ?? 'eur') as FiatKey;
-    return formatAmount(String(order.fiat_amount), fiatKey);
+    return formatAmountWithSymbol(String(order.fiat_amount), fiatKey);
   })();
 
   return (
@@ -59,7 +56,7 @@ export default function QRPaymentScreen() {
             {/* Amount */}
             {order && (
               <Typography variant="h1" align="center" color={theme.colors.neutral[0]}>
-                {amountLabel} {symbol}
+                {amountLabel}
               </Typography>
             )}
 

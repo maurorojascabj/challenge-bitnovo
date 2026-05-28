@@ -3,6 +3,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Modal, StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 
+import { BlurView } from 'expo-blur';
+
 import { Button } from '@/components/atoms/Button';
 import { Typography } from '@/components/atoms/Typography';
 import { PaymentSummaryCard } from '@/components/molecules/PaymentSummaryCard';
@@ -10,8 +12,8 @@ import { ShareRow } from '@/components/molecules/ShareRow';
 import { WhatsAppShareRow } from '@/components/molecules/WhatsAppShareRow';
 import { Toast } from '@/components/organisms/Toast';
 import { ScreenContainer } from '@/components/templates/ScreenContainer';
-import { FiatKey, getCurrencyByCode } from '@/constants/currencies';
-import { formatAmount } from '@/utils';
+import { FiatKey } from '@/constants/currencies';
+import { formatAmountWithSymbol } from '@/utils';
 import { usePaymentStatus } from '@/features/payments/hooks/usePaymentStatus';
 import { useShareLinks } from '@/features/payments/hooks/useShareLinks';
 import { useCountrySelectionStore } from '@/store/useCountrySelectionStore';
@@ -42,13 +44,10 @@ export default function SharePaymentScreen() {
   const webUrl = order?.web_url ?? '';
   const { shareWhatsApp, shareNative } = useShareLinks({ webUrl });
 
-  const currency = order?.fiat ? getCurrencyByCode(order.fiat) : undefined;
-  const symbol = currency?.symbol ?? order?.fiat ?? '';
-
   const amountLabel = (() => {
     if (order == null || order.fiat_amount == null) return '';
     const fiatKey = (order.fiat?.toLowerCase() ?? 'eur') as FiatKey;
-    return formatAmount(String(order.fiat_amount), fiatKey);
+    return formatAmountWithSymbol(String(order.fiat_amount), fiatKey);
   })();
 
   const showToast = useCallback(
@@ -100,7 +99,6 @@ export default function SharePaymentScreen() {
           {order && (
             <PaymentSummaryCard
               amount={amountLabel}
-              symbol={symbol}
               subtitle="Comparte el enlace de pago con el cliente"
             />
           )}
@@ -151,7 +149,8 @@ export default function SharePaymentScreen() {
         animationType="fade"
         onRequestClose={() => setShowWASuccess(false)}
       >
-        <View style={styles.modalOverlay}>
+        <BlurView intensity={50} tint="dark" style={styles.modalOverlay}>
+          <View style={styles.blurColorOverlay} pointerEvents="none" />
           <View style={styles.modalCard}>
             <TickCircleGreenIcon width={72} height={72} style={styles.checkCircle} />
             <Typography variant="h2" align="center" style={styles.modalTitle}>
@@ -167,7 +166,7 @@ export default function SharePaymentScreen() {
             </Typography>
             <Button label="Entendido" onPress={handleNewRequest} fullWidth />
           </View>
-        </View>
+        </BlurView>
       </Modal>
 
       <Toast
@@ -200,10 +199,13 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
     paddingHorizontal: theme.spacing.xl,
     paddingBottom: theme.spacing.xl,
+  } as ViewStyle,
+  blurColorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(30, 214, 235, 0.10)',
   } as ViewStyle,
   modalCard: {
     width: '100%',

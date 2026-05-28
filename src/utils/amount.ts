@@ -93,14 +93,26 @@ export function formatAmount(raw: string, currency: FiatKey): string {
 }
 
 /**
+ * Format a raw amount string with its currency symbol in the correct
+ * locale-aware position. Single source of truth for amount display.
+ *
+ *   formatAmountWithSymbol('1250.5', 'eur') → '1.250,50 €'
+ *   formatAmountWithSymbol('1250.5', 'usd') → '$ 1,250.50'
+ *   formatAmountWithSymbol('1250.5', 'gbp') → '£ 1,250.50'
+ *
+ * Returns '' for empty input.
+ */
+export function formatAmountWithSymbol(raw: string, currency: FiatKey): string {
+  const formatted = formatAmount(raw, currency);
+  if (!formatted) return '';
+  const { symbol, symbolPosition } = FIAT_CURRENCIES[currency];
+  return symbolPosition === 'left' ? `${symbol} ${formatted}` : `${formatted} ${symbol}`;
+}
+
+/**
  * Locale-correct validation error message for amounts exceeding MAX_AMOUNT.
  * e.g. formatMaxError('eur') → "El monto máximo diario es de 30.000,00 €"
  */
 export function formatMaxError(currency: FiatKey): string {
-  const { symbol } = FIAT_CURRENCIES[currency];
-  const { symbolPosition } = FIAT_CURRENCIES[currency] as { symbolPosition: 'left' | 'right' };
-  const formatted = formatAmount(String(MAX_AMOUNT), currency);
-  return symbolPosition === 'left'
-    ? `El monto máximo diario es de ${symbol} ${formatted}`
-    : `El monto máximo diario es de ${formatted} ${symbol}`;
+  return `El monto máximo diario es de ${formatAmountWithSymbol(String(MAX_AMOUNT), currency)}`;
 }
