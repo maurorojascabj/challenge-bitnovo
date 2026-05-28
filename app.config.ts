@@ -17,7 +17,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.maurorojas.challengebitnovo',
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
       backgroundColor: '#035AC5',
     },
     edgeToEdgeEnabled: true,

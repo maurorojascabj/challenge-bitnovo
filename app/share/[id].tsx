@@ -2,6 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Modal, StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BlurView } from 'expo-blur';
 
@@ -29,6 +30,7 @@ import WalletAddIcon from '@/assets/svg/wallet-add.svg';
 
 export default function SharePaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const order = useOrderStore((s) => s.order);
   const clearOrder = useOrderStore((s) => s.clearOrder);
   const clearCountry = useCountrySelectionStore((s) => s.clear);
@@ -149,7 +151,11 @@ export default function SharePaymentScreen() {
         animationType="fade"
         onRequestClose={() => setShowWASuccess(false)}
       >
-        <BlurView intensity={50} tint="dark" style={styles.modalOverlay}>
+        <BlurView
+          intensity={50}
+          tint="dark"
+          style={[styles.modalOverlay, { paddingBottom: insets.bottom + theme.spacing.xl }]}
+        >
           <View style={styles.blurColorOverlay} pointerEvents="none" />
           <View style={styles.modalCard}>
             <TickCircleGreenIcon width={72} height={72} style={styles.checkCircle} />
@@ -201,7 +207,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.xl,
+    // paddingBottom is applied dynamically (insets.bottom + xl) so the
+    // modal card clears the Android navigation bar on edge-to-edge builds.
   } as ViewStyle,
   blurColorOverlay: {
     ...StyleSheet.absoluteFillObject,
