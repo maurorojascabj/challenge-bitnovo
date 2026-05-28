@@ -1,33 +1,36 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ViewStyle, TextStyle, ScrollView, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Modal, StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 
-import { theme } from '@/theme';
-import { ScreenContainer } from '@/components/templates/ScreenContainer';
-import { HeaderBar } from '@/components/templates/HeaderBar';
-import { Typography } from '@/components/atoms/Typography';
 import { Button } from '@/components/atoms/Button';
-import { ShareOption } from '@/components/molecules/ShareOption';
+import { Typography } from '@/components/atoms/Typography';
+import { PaymentSummaryCard } from '@/components/molecules/PaymentSummaryCard';
+import { ShareRow } from '@/components/molecules/ShareRow';
+import { WhatsAppShareRow } from '@/components/molecules/WhatsAppShareRow';
 import { Toast } from '@/components/organisms/Toast';
-import { WhatsAppModal } from '@/components/organisms/WhatsAppModal';
-import { useOrderStore } from '@/store/useOrderStore';
+import { ScreenContainer } from '@/components/templates/ScreenContainer';
+import { getCurrencyByCode } from '@/constants/currencies';
 import { usePaymentStatus } from '@/features/payments/hooks/usePaymentStatus';
 import { useShareLinks } from '@/features/payments/hooks/useShareLinks';
+import { useCountrySelectionStore } from '@/store/useCountrySelectionStore';
+import { useOrderStore } from '@/store/useOrderStore';
+import { theme } from '@/theme';
 
-import WhatsAppIcon from '@/assets/svg/whatsapp.svg';
-import SmsIcon from '@/assets/svg/sms.svg';
 import ExportIcon from '@/assets/svg/export.svg';
-import ScanBarcodeIcon from '@/assets/svg/scan-barcode.svg';
 import LinkIcon from '@/assets/svg/link.svg';
+import ScanBarcodeIcon from '@/assets/svg/scan-barcode.svg';
+import SmsIcon from '@/assets/svg/sms.svg';
+import TickCircleGreenIcon from '@/assets/svg/tick-circle-green.svg';
 import WalletAddIcon from '@/assets/svg/wallet-add.svg';
 
 export default function SharePaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const order = useOrderStore((s) => s.order);
   const clearOrder = useOrderStore((s) => s.clearOrder);
+  const clearCountry = useCountrySelectionStore((s) => s.clear);
 
-  const [showWA, setShowWA] = useState(false);
+  const [showWASuccess, setShowWASuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
@@ -36,7 +39,17 @@ export default function SharePaymentScreen() {
   usePaymentStatus(id);
 
   const webUrl = order?.web_url ?? '';
-  const { shareWhatsApp, shareEmail, shareNative } = useShareLinks({ webUrl });
+  const { shareWhatsApp, shareNative } = useShareLinks({ webUrl });
+
+  const currency = order?.fiat ? getCurrencyByCode(order.fiat) : undefined;
+  const symbol = currency?.symbol ?? order?.fiat ?? '';
+
+  // Format amount with 2 decimals; use comma separator for EUR/GBP, dot for USD
+  const amountLabel = (() => {
+    if (order == null || order.fiat_amount == null) return '';
+    const fixed = order.fiat_amount.toFixed(2);
+    return order.fiat === 'USD' ? fixed : fixed.replace('.', ',');
+  })();
 
   const showToast = useCallback(
     (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -47,94 +60,115 @@ export default function SharePaymentScreen() {
     []
   );
 
-  const handleCopyUrl = async () => {
+  const handleCopyUrl = useCallback(async () => {
     await Clipboard.setStringAsync(webUrl);
     showToast('Enlace copiado al portapapeles');
-  };
+  }, [webUrl, showToast]);
 
-  const handleNewRequest = () => {
+  const handleWhatsAppSend = useCallback(
+    (countryCode: string, phone: string) => {
+      shareWhatsApp(countryCode, phone);
+      setShowWASuccess(true);
+    },
+    [shareWhatsApp]
+  );
+
+  const handleNewRequest = useCallback(() => {
+    setShowWASuccess(false);
     clearOrder();
+    clearCountry();
     router.replace('/');
-  };
+  }, [clearOrder, clearCountry]);
 
   return (
     <>
-      <HeaderBar title="Compartir pago" showBack />
-      <ScreenContainer>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Amount */}
-          {order && (
-            <View style={styles.amountCard}>
-              <Typography variant="caption" color={theme.colors.textSecondary} align="center">
-                Importe a cobrar
-              </Typography>
-              <Typography variant="h1" align="center" color={theme.colors.primary[500]}>
-                {order.fiat_amount} {order.fiat}
-              </Typography>
-            </View>
-          )}
-
-          {/* Payment URL */}
-          <View style={styles.urlSection}>
-            <Typography variant="smallSemibold" color={theme.colors.textSecondary}>
-              Enlace de pago
-            </Typography>
-            <TouchableOpacity onPress={handleCopyUrl} activeOpacity={0.8} style={styles.urlRow}>
-              <LinkIcon width={20} height={20} />
-              <Typography
-                variant="small"
-                color={theme.colors.primary[500]}
-                style={styles.urlText}
-                numberOfLines={1}
-              >
-                {webUrl}
-              </Typography>
-            </TouchableOpacity>
-          </View>
-
-          {/* Share options */}
-          <View style={styles.shareGrid}>
-            <ShareOption
-              icon={<WhatsAppIcon width={28} height={28} />}
-              label="WhatsApp"
-              onPress={() => setShowWA(true)}
-            />
-            <ShareOption
-              icon={<SmsIcon width={28} height={28} />}
-              label="Email"
-              onPress={shareEmail}
-            />
-            <ShareOption
-              icon={<ExportIcon width={28} height={28} />}
-              label="Compartir"
-              onPress={shareNative}
-            />
-            <ShareOption
-              icon={<ScanBarcodeIcon width={28} height={28} />}
-              label="Ver QR"
-              onPress={() => router.push(`/qr/${id}`)}
-            />
-          </View>
-        </ScrollView>
-
-        {/* Nueva solicitud */}
-        <View style={styles.footer}>
+      <ScreenContainer
+        scrollable
+        edges={['top', 'bottom']}
+        stickyFooter={
           <Button
-            label="Nueva Solicitud"
+            label="Nueva solicitud"
             variant="ghost"
             onPress={handleNewRequest}
             fullWidth
-            leftIcon={<WalletAddIcon width={20} height={20} />}
+            rightIcon={<WalletAddIcon width={20} height={20} />}
           />
+        }
+      >
+        <View style={styles.content}>
+          {/* Summary card */}
+          {order && (
+            <PaymentSummaryCard
+              amount={amountLabel}
+              symbol={symbol}
+              subtitle="Comparte el enlace de pago con el cliente"
+            />
+          )}
+
+          {/* Share rows */}
+          <View style={styles.rows}>
+            {/* URL row */}
+            <ShareRow
+              icon={<LinkIcon width={24} height={24} />}
+              label={webUrl}
+              onPress={handleCopyUrl}
+              trailing={
+                <TouchableOpacity
+                  style={styles.qrButton}
+                  onPress={() => router.push(`/qr/${id}`)}
+                  activeOpacity={0.7}
+                  hitSlop={4}
+                >
+                  <ScanBarcodeIcon width={22} height={22} />
+                </TouchableOpacity>
+              }
+            />
+
+            {/* Email row */}
+            <ShareRow
+              icon={<SmsIcon width={24} height={24} />}
+              label="Enviar por email"
+              onPress={shareNative}
+            />
+
+            {/* WhatsApp inline row */}
+            <WhatsAppShareRow onSend={handleWhatsAppSend} />
+
+            {/* Other apps row */}
+            <ShareRow
+              icon={<ExportIcon width={24} height={24} />}
+              label="Compartir con otras aplicaciones"
+              onPress={shareNative}
+            />
+          </View>
         </View>
       </ScreenContainer>
 
-      {/* WhatsApp modal */}
-      <WhatsAppModal visible={showWA} onClose={() => setShowWA(false)} onSend={shareWhatsApp} />
+      {/* WhatsApp success modal */}
+      <Modal
+        visible={showWASuccess}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowWASuccess(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <TickCircleGreenIcon width={72} height={72} style={styles.checkCircle} />
+            <Typography variant="h2" align="center" style={styles.modalTitle}>
+              Solicitud enviada
+            </Typography>
+            <Typography
+              variant="body"
+              align="center"
+              color={theme.colors.textSecondary}
+              style={styles.modalBody}
+            >
+              Tu solicitud de pago ha sido enviada con éxito por WhatsApp.
+            </Typography>
+            <Button label="Entendido" onPress={handleNewRequest} fullWidth />
+          </View>
+        </View>
+      </Modal>
 
       <Toast
         message={toastMessage}
@@ -147,55 +181,46 @@ export default function SharePaymentScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
+  content: {
     flex: 1,
-  } as ViewStyle,
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxl,
     gap: theme.spacing.xl,
   } as ViewStyle,
-  amountCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.xs,
-    ...theme.shadows.card,
+  rows: {
+    gap: theme.spacing.md,
   } as ViewStyle,
-  urlSection: {
-    gap: theme.spacing.sm,
-  } as ViewStyle,
-  urlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.primary[50],
+  qrButton: {
+    width: 44,
+    height: 44,
     borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.primary[100],
+    backgroundColor: theme.colors.primary[500],
+    alignItems: 'center',
+    justifyContent: 'center',
   } as ViewStyle,
-  urlText: {
+  // Modal
+  modalOverlay: {
     flex: 1,
-    textDecorationLine: 'underline',
-  } as TextStyle,
-  shareGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-  } as ViewStyle,
-  footer: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    paddingBottom: theme.spacing.xl,
   } as ViewStyle,
+  modalCard: {
+    width: '100%',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xxl,
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    ...theme.shadows.modal,
+  } as ViewStyle,
+  checkCircle: {
+    marginBottom: theme.spacing.sm,
+  } as ViewStyle,
+  modalTitle: {
+    marginBottom: theme.spacing.xs,
+  } as TextStyle,
+  modalBody: {
+    marginBottom: theme.spacing.md,
+  } as TextStyle,
 });

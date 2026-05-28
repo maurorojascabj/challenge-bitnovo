@@ -1,16 +1,20 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import React from 'react';
+import { StyleSheet, TextStyle, View, ViewStyle } from 'react-native';
 
-import { theme } from '@/theme';
-import { ScreenContainer } from '@/components/templates/ScreenContainer';
-import { HeaderBar } from '@/components/templates/HeaderBar';
-import { Typography } from '@/components/atoms/Typography';
 import { Loader } from '@/components/atoms/Loader';
+import { Typography } from '@/components/atoms/Typography';
 import { QRCard } from '@/components/molecules/QRCard';
+import { HeaderBar } from '@/components/templates/HeaderBar';
+import { ScreenContainer } from '@/components/templates/ScreenContainer';
+import { theme } from '@/theme';
 
-import { useOrderStore } from '@/store/useOrderStore';
+import { getCurrencyByCode } from '@/constants/currencies';
 import { usePaymentStatus } from '@/features/payments/hooks/usePaymentStatus';
+import { useOrderStore } from '@/store/useOrderStore';
+
+import BitnovoLogo from '@/assets/svg/Bitnovo-logo.svg';
+import InfoCircleIcon from '@/assets/svg/info-circle.svg';
 
 export default function QRPaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,33 +25,56 @@ export default function QRPaymentScreen() {
 
   const webUrl = order?.web_url;
 
+  const currency = order?.fiat ? getCurrencyByCode(order.fiat) : undefined;
+  const symbol = currency?.symbol ?? order?.fiat ?? '';
+
+  const amountLabel = (() => {
+    if (order == null || order.fiat_amount == null) return '';
+    const fixed = order.fiat_amount.toFixed(2);
+    return order.fiat === 'USD' ? fixed : fixed.replace('.', ',');
+  })();
+
   return (
     <>
-      <HeaderBar title="Código QR" showBack />
-      <ScreenContainer>
-        <View style={styles.container}>
-          {webUrl ? (
-            <>
-              <QRCard value={webUrl} size={240} />
+      <HeaderBar showBack />
+      <ScreenContainer backgroundColor={theme.colors.primary[500]} padded={false}>
+        {webUrl ? (
+          <View style={styles.container}>
+            {/* Info banner */}
+            <View style={styles.banner}>
+              <InfoCircleIcon width={24} height={24} />
+              <Typography
+                variant="small"
+                color={theme.colors.textPrimary}
+                style={styles.bannerText}
+              >
+                Escanea el QR y serás redirigido a la pasarela de pago de Bitnovo Pay.
+              </Typography>
+            </View>
 
-              <View style={styles.info}>
-                {order && (
-                  <Typography variant="h2" align="center" color={theme.colors.primary[500]}>
-                    {order.fiat_amount} {order.fiat}
-                  </Typography>
-                )}
-                <Typography variant="body" color={theme.colors.textSecondary} align="center">
-                  Escanea el código QR para completar el pago
-                </Typography>
-                <Typography variant="caption" color={theme.colors.neutral[400]} align="center">
-                  La pantalla se actualizará automáticamente al recibir el pago.
-                </Typography>
-              </View>
-            </>
-          ) : (
-            <Loader fullScreen />
-          )}
-        </View>
+            {/* QR code with Bitnovo logo */}
+            <QRCard value={webUrl} size={260} logo={<BitnovoLogo width={80} height={29} />} />
+
+            {/* Amount */}
+            {order && (
+              <Typography variant="h1" align="center" color={theme.colors.neutral[0]}>
+                {amountLabel} {symbol}
+              </Typography>
+            )}
+
+            {/* Subtitle */}
+            <Typography
+              variant="small"
+              color={theme.colors.surface}
+              align="center"
+              style={styles.subtitle}
+            >
+              Esta pantalla se actualizará automáticamente.
+            </Typography>
+          </View>
+        ) : (
+          <Loader fullScreen />
+        )}
       </ScreenContainer>
     </>
   );
@@ -57,13 +84,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.xxxl,
+    marginVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.xl,
+    gap: theme.spacing.xl,
   } as ViewStyle,
-  info: {
+  banner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-    maxWidth: 320,
+    backgroundColor: theme.colors.buttonDisabledBg,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    width: '100%',
   } as ViewStyle,
+  bannerText: {
+    flex: 1,
+  } as TextStyle,
+  subtitle: {
+    maxWidth: 320,
+  } as TextStyle,
 });

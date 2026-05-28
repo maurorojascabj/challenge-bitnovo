@@ -47,10 +47,7 @@ export default function RootLayout() {
           <Stack.Screen name="qr/[id]" />
           <Stack.Screen name="success" />
           <Stack.Screen name="selectors/fiat" />
-          <Stack.Screen
-            name="selectors/country"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
+          <Stack.Screen name="selectors/country" />
         </Stack>
       </GestureHandlerRootView>
     </SafeAreaProvider>

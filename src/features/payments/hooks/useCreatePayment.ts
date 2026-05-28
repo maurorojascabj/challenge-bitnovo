@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
-import { createPayment } from '../api/paymentsApi';
 import { useOrderStore } from '@/store/useOrderStore';
-import { CreatePaymentRequest, AppError } from '../types';
+import { useCallback, useState } from 'react';
+import { createPayment } from '../api/paymentsApi';
+import { AppError, CreatePaymentRequest } from '../types';
 
 interface UseCreatePaymentResult {
   isLoading: boolean;
@@ -24,8 +24,15 @@ export function useCreatePayment(): UseCreatePaymentResult {
       setError(null);
       try {
         const order = await createPayment(input);
-        setOrder(order);
-        return order.identifier;
+        // The create endpoint may omit fiat_amount in its response.
+        // Enrich with the value the user entered so the share screen can display it.
+        const enrichedOrder = {
+          ...order,
+          fiat_amount: order.fiat_amount ?? input.expected_output_amount,
+          fiat: order.fiat ?? input.fiat,
+        };
+        setOrder(enrichedOrder);
+        return enrichedOrder.identifier;
       } catch (err) {
         setError(err as AppError);
         return null;

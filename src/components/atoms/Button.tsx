@@ -14,6 +14,7 @@ interface ButtonProps {
   disabled?: boolean;
   fullWidth?: boolean;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
   style?: ViewStyle;
 }
 
@@ -25,6 +26,7 @@ export const Button = memo(function Button({
   disabled = false,
   fullWidth = false,
   leftIcon,
+  rightIcon,
   style,
 }: ButtonProps) {
   const isDisabled = disabled || isLoading;
@@ -61,6 +63,7 @@ export const Button = memo(function Button({
           <Typography variant="bodySemibold" color={getTextColor(variant, isDisabled)}>
             {label}
           </Typography>
+          {rightIcon && <View style={styles.iconWrapper}>{rightIcon}</View>}
         </View>
       )}
     </TouchableOpacity>

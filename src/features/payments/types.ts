@@ -17,6 +17,7 @@ export interface Order {
   notes?: string;
   created_at?: string;
   expired_time?: string;
+  addres?: string;
 }
 
 // ─── Order status ─────────────────────────────────────────────────────────────

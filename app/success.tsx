@@ -7,7 +7,7 @@ import { ScreenContainer } from '@/components/templates/ScreenContainer';
 import { HeaderBar } from '@/components/templates/HeaderBar';
 import { Typography } from '@/components/atoms/Typography';
 import { Button } from '@/components/atoms/Button';
-import { AnimatedSuccess } from '@/components/organisms/AnimatedSuccess';
+import TickCircleIcon from '@/assets/svg/tick-circle.svg';
 
 import { useOrderStore } from '@/store/useOrderStore';
 
@@ -25,8 +25,8 @@ export default function PaymentSuccessScreen() {
       <HeaderBar showLogo />
       <ScreenContainer>
         <View style={styles.container}>
-          {/* Animated success icon */}
-          <AnimatedSuccess size={120} />
+          {/* Success icon */}
+          <TickCircleIcon width={120} height={120} />
 
           {/* Text */}
           <View style={styles.textBlock}>

@@ -8,7 +8,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Edge, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 
 interface ScreenContainerProps {
@@ -18,6 +18,7 @@ interface ScreenContainerProps {
   padded?: boolean;
   style?: ViewStyle;
   stickyFooter?: React.ReactNode;
+  edges?: Edge[];
 }
 
 export const ScreenContainer = memo(function ScreenContainer({
@@ -27,6 +28,7 @@ export const ScreenContainer = memo(function ScreenContainer({
   padded = true,
   style,
   stickyFooter,
+  edges = ['bottom'],
 }: ScreenContainerProps) {
   const insets = useSafeAreaInsets();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -73,8 +75,12 @@ export const ScreenContainer = memo(function ScreenContainer({
     // When keyboard is open: push content up by keyboard height.
     // When keyboard is closed: cushion the home indicator with the safe area inset.
     const bottomPad = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
+    // Apply top inset when the screen has no HeaderBar (e.g. share screen passes edges=['top','bottom'])
+    const topPad = edges.includes('top') ? insets.top : 0;
     return (
-      <View style={[styles.safe, { backgroundColor, paddingBottom: bottomPad }]}>
+      <View
+        style={[styles.safe, { backgroundColor, paddingTop: topPad, paddingBottom: bottomPad }]}
+      >
         {content}
         <View style={[styles.footer, padded && styles.padded]}>{stickyFooter}</View>
       </View>
@@ -83,7 +89,7 @@ export const ScreenContainer = memo(function ScreenContainer({
 
   // Default path: SafeAreaView + KeyboardAvoidingView (no sticky footer)
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor }]} edges={edges}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

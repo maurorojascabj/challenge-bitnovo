@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
 import * as Linking from 'expo-linking';
 import * as Sharing from 'expo-sharing';
+import { useCallback } from 'react';
 import { Share } from 'react-native';
 
 interface UseShareLinksOptions {
@@ -9,7 +9,6 @@ interface UseShareLinksOptions {
 
 interface UseShareLinksResult {
   shareWhatsApp: (countryCode: string, phone: string) => Promise<void>;
-  shareEmail: () => Promise<void>;
   shareNative: () => Promise<void>;
 }
 
@@ -30,16 +29,6 @@ export function useShareLinks({ webUrl }: UseShareLinksOptions): UseShareLinksRe
     [webUrl]
   );
 
-  const shareEmail = useCallback(async () => {
-    const subject = encodeURIComponent('Pago con Bitnovo');
-    const body = encodeURIComponent(`Accede a tu pago aquí: ${webUrl}`);
-    const mailUrl = `mailto:?subject=${subject}&body=${body}`;
-    const canOpen = await Linking.canOpenURL(mailUrl);
-    if (canOpen) {
-      await Linking.openURL(mailUrl);
-    }
-  }, [webUrl]);
-
   const shareNative = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
     if (isAvailable) {
@@ -51,5 +40,5 @@ export function useShareLinks({ webUrl }: UseShareLinksOptions): UseShareLinksRe
     });
   }, [webUrl]);
 
-  return { shareWhatsApp, shareEmail, shareNative };
+  return { shareWhatsApp, shareNative };
 }
