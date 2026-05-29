@@ -2,7 +2,7 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'challenge-bitnovo',
+  name: 'Bitnovo',
   slug: 'challenge-bitnovo',
   version: '1.0.0',
   orientation: 'portrait',
@@ -17,7 +17,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.maurorojas.challengebitnovo',
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
       backgroundColor: '#035AC5',
     },
     edgeToEdgeEnabled: true,
@@ -41,6 +40,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#035AC5',
+        // Makes the Android 12+ squircle container match the splash background
+        // so the icon appears floating on solid blue instead of white squircle.
+        imageBackgroundColor: '#035AC5',
       },
     ],
   ],

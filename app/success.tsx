@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { router } from 'expo-router';
+import { useNavigation } from 'expo-router';
+import { CommonActions } from '@react-navigation/native';
 
 import { theme } from '@/theme';
 import { ScreenContainer } from '@/components/templates/ScreenContainer';
@@ -13,10 +14,13 @@ import { useOrderStore } from '@/store/useOrderStore';
 
 export default function PaymentSuccessScreen() {
   const clearOrder = useOrderStore((s) => s.clearOrder);
+  const navigation = useNavigation();
 
   const handleFinish = () => {
     clearOrder();
-    router.replace('/');
+    // Reset the entire stack to root so the Android back button cannot
+    // navigate back to the success / share screens after finishing.
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'index' }] }));
   };
 
   return (
